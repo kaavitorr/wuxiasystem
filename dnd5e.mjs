@@ -1,0 +1,936 @@
+/**
+ * The D&D fifth edition game system for Foundry Virtual Tabletop
+ * A system for playing the fifth edition of the world's most popular role-playing game.
+ * Author: Atropos
+ * Software License: MIT
+ * Content License: https://www.dndbeyond.com/attachments/39j2li89/SRD5.1-CCBY4.0License.pdf
+ *                  https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.pdf
+ * Repository: https://github.com/foundryvtt/dnd5e
+ * Issue Tracker: https://github.com/foundryvtt/dnd5e/issues
+ */
+
+// Idioma do Sistema (Hunter) — importado cedo: pré-carrega os idiomas (top-level await)
+// e registra o hook i18nInit ANTES da pré-localização do CONFIG (mais abaixo neste arquivo).
+import "./module/hunter-language.mjs";
+
+// Import Configuration
+import DND5E from "./module/config.mjs";
+import {
+  applyLegacyRules, registerDeferredSettings, registerSystemKeybindings, registerSystemSettings
+} from "./module/settings.mjs";
+
+// Import Submodules
+import * as applications from "./module/applications/_module.mjs";
+import * as canvas from "./module/canvas/_module.mjs";
+import * as dataModels from "./module/data/_module.mjs";
+import * as dice from "./module/dice/_module.mjs";
+import * as documents from "./module/documents/_module.mjs";
+import * as enrichers from "./module/enrichers.mjs";
+import * as Filter from "./module/filter.mjs";
+import * as migrations from "./module/migration.mjs";
+import ModuleArt from "./module/module-art.mjs";
+import { registerModuleData, registerModuleRedirects, setupModulePacks } from "./module/module-registration.mjs";
+import { default as registry } from "./module/registry.mjs";
+import Tooltips5e from "./module/tooltips.mjs";
+import * as utils from "./module/utils.mjs";
+import DragDrop5e from "./module/drag-drop.mjs";
+
+/* -------------------------------------------- */
+/*  Define Module Structure                     */
+/* -------------------------------------------- */
+
+globalThis.dnd5e = {
+  applications,
+  canvas,
+  config: DND5E,
+  dataModels,
+  dice,
+  documents,
+  enrichers,
+  Filter,
+  migrations,
+  registry,
+  ui: {},
+  utils
+};
+
+/* -------------------------------------------- */
+/*  Foundry VTT Initialization                  */
+/* -------------------------------------------- */
+
+Hooks.once("init", function() {
+  globalThis.dnd5e = game.dnd5e = Object.assign(game.system, globalThis.dnd5e);
+  utils.log(`Initializing the D&D Fifth Game System - Version ${dnd5e.version}\n${DND5E.ASCII}`);
+
+  /**
+   * Suppress some known deprecations.
+   * @deprecated
+   * @since 5.3.0
+   */
+  CONFIG.compatibility.excludePatterns.push(/numeric #mode/, /CONST\.ACTIVE_EFFECT_MODES/, /ContextMenuEntry#/,
+    /foundry\.data\.operators\.ForcedDeletion/, /foundry\.utils\.buildRelativeUuid/, /CONFIG.ChatMessage.modes/,
+    /core\.rollMode/, /ChatMessage\.applyRollMode/, /Scene#templates/, /MeasuredTemplate/, /MeasuredTemplateDocument/,
+    /core\.gridTemplates/, /core\.coneTemplateType/, /ControlIcon#refresh/);
+
+  // Record Configuration Values
+  CONFIG.DND5E = DND5E;
+
+  // ── Jujutsu Legacy: remover cálculos de CR não utilizados ─────────────────
+  for ( const key of ["natural", "default", "mage", "draconic", "unarmoredMonk", "unarmoredBarb", "unarmoredBard"] ) {
+    delete CONFIG.DND5E.armorClasses[key];
+  }
+
+  // ── Jujutsu Legacy: remover cálculos de CR não utilizados
+  for ( const key of ["natural", "default", "mage", "draconic", "unarmoredMonk", "unarmoredBarb", "unarmoredBard"] ) {
+    delete CONFIG.DND5E.armorClasses[key];
+  }
+
+  // ── Jujutsu Legacy: Cálculos de CR customizados ─────────────────────────
+  // "Corpo de Lutador" — 10 + mod principal + min(mod CON, floor(nível / 2))
+  // "Defesa Ofensiva"  — 10 + mod AGI + mod principal (sem cap)
+  Object.assign(CONFIG.DND5E.armorClasses, {
+
+    // ── CORPO DE LUTADOR ─────────────────────────────────────────────────
+    corpoLutadorStr: {
+      label: "Corpo de Lutador (Força)",
+      formula: "10 + @abilities.str.mod + min(@abilities.con.mod, floor(@details.level / 2))"
+    },
+    corpoLutadorDex: {
+      label: "Corpo de Lutador (Agilidade)",
+      formula: "10 + @abilities.dex.mod + min(@abilities.con.mod, floor(@details.level / 2))"
+    },
+   corpoLutadorWis: {
+      label: "Corpo de Lutador (Sabedoria)",
+      formula: "10 + @abilities.wis.mod + min(@abilities.con.mod, floor(@details.level / 2))"
+    },
+    corpoLutadorCha: {
+      label: "Corpo de Lutador (Presença)",
+      formula: "10 + @abilities.cha.mod + min(@abilities.con.mod, floor(@details.level / 2))"
+    },
+
+    // ── DEFESA OFENSIVA ──────────────────────────────────────────────────
+    defesaOfensivaStr: {
+      label: "Defesa Ofensiva (Força)",
+      formula: "10 + @abilities.dex.mod + @abilities.str.mod"
+    },
+    defesaOfensivaDex: {
+      label: "Defesa Ofensiva (Agilidade)",
+      formula: "10 + @abilities.dex.mod + @abilities.dex.mod"
+    },
+    defesaOfensivaWis: {
+      label: "Defesa Ofensiva (Sabedoria)",
+      formula: "10 + @abilities.dex.mod + @abilities.wis.mod"
+    },
+    defesaOfensivaCha: {
+      label: "Defesa Ofensiva (Presença)",
+      formula: "10 + @abilities.dex.mod + @abilities.cha.mod"
+    },
+
+    // ── CULTIVO DO CORPO ──────────────────────────────────────────────
+    // A partir do nível 2 no Caminho do Corpo: CR = 14 + 2 × (nível − 2).
+    // Nível 2 → CR 14, nível 3 → 16, ... nível 10 → 30.
+    // Abaixo do nível 2 (0 ou 1) a CR fica 14 (base do Temperando a Medula).
+    cultivoCorpo: {
+      label: "Cultivo do Corpo",
+      formula: "14 + (max(0, @cultivation.bodyCultivation - 2) * 2)"
+    }
+  });
+  // ────────────────────────────────────────────────────────────────────────
+
+  CONFIG.ActiveEffect.documentClass = documents.ActiveEffect5e;
+  CONFIG.ActiveEffect.legacyTransferral = false;
+  CONFIG.Actor.collection = dataModels.collection.Actors5e;
+  CONFIG.Actor.documentClass = documents.Actor5e;
+  CONFIG.Adventure.documentClass = documents.Adventure5e;
+  CONFIG.ChatMessage.documentClass = documents.ChatMessage5e;
+  CONFIG.Combat.documentClass = documents.Combat5e;
+  CONFIG.Combatant.documentClass = documents.Combatant5e;
+  CONFIG.CombatantGroup.documentClass = documents.CombatantGroup5e;
+  CONFIG.Item.collection = dataModels.collection.Items5e;
+  CONFIG.Item.compendiumIndexFields.push("system.container", "system.identifier");
+  CONFIG.Item.documentClass = documents.Item5e;
+  CONFIG.JournalEntryPage.documentClass = documents.JournalEntryPage5e;
+  CONFIG.Token.documentClass = documents.TokenDocument5e;
+  CONFIG.Token.objectClass = canvas.Token5e;
+  CONFIG.Token.rulerClass = canvas.TokenRuler5e;
+  CONFIG.Token.movement.TerrainData = dataModels.TerrainData5e;
+  CONFIG.User.documentClass = documents.User5e;
+  CONFIG.time.roundTime = 6;
+  Roll.TOOLTIP_TEMPLATE = "systems/wuxia-system/templates/chat/roll-breakdown.hbs";
+  CONFIG.Dice.BasicDie = CONFIG.Dice.terms.d = dice.BasicDie;
+  CONFIG.Dice.BasicRoll = dice.BasicRoll;
+  CONFIG.Dice.DamageRoll = dice.DamageRoll;
+  CONFIG.Dice.D20Die = dice.D20Die;
+  CONFIG.Dice.D20Roll = dice.D20Roll;
+  CONFIG.MeasuredTemplate.defaults.angle = 53.13; // 5e cone RAW should be 53.13 degrees
+  CONFIG.Note.objectClass = canvas.Note5e;
+  CONFIG.ui.chat = applications.ChatLog5e;
+  CONFIG.ui.combat = applications.combat.CombatTracker5e;
+  CONFIG.ui.items = applications.item.ItemDirectory5e;
+  CONFIG.ux.DragDrop = DragDrop5e;
+
+  if ( game.release.generation < 14 ) CONFIG.Token.layerClass = canvas.layers.TokenLayer5e;
+  CONFIG.Canvas.layers.tokens.layerClass = canvas.layers.TokenLayer5e;
+
+  // Register System Settings
+  registerSystemSettings();
+  registerSystemKeybindings();
+
+  // Configure module art
+  game.dnd5e.moduleArt = new ModuleArt();
+
+  // Configure bastions
+  game.dnd5e.bastion = new documents.Bastion();
+
+  // Configure tooltips
+  game.dnd5e.tooltips = new Tooltips5e();
+
+  // Remove honor & sanity from configuration if they aren't enabled
+  if ( !game.settings.get("wuxia-system", "honorScore") ) delete DND5E.abilities.hon;
+  if ( !game.settings.get("wuxia-system", "sanityScore") ) delete DND5E.abilities.san;
+
+  // Legacy rules.
+  if ( dnd5e.settings.rulesVersion === "legacy" ) applyLegacyRules();
+
+  // Register system
+  DND5E.SPELL_LISTS.forEach(uuid => dnd5e.registry.spellLists.register(uuid));
+
+  // Register module data from manifests
+  registerModuleData();
+  registerModuleRedirects();
+
+  // Register Roll Extensions
+  CONFIG.Dice.rolls = [dice.BasicRoll, dice.D20Roll, dice.DamageRoll];
+
+  // Hook up system data types
+  Object.assign(CONFIG.ActiveEffect.dataModels, dataModels.activeEffect.config);
+  CONFIG.Actor.dataModels = dataModels.actor.config;
+  CONFIG.ChatMessage.dataModels = dataModels.chatMessage.config;
+  CONFIG.Item.dataModels = dataModels.item.config;
+  CONFIG.JournalEntryPage.dataModels = dataModels.journal.config;
+  Object.assign(CONFIG.RegionBehavior.dataModels, dataModels.regionBehavior.config);
+  Object.assign(CONFIG.RegionBehavior.typeIcons, dataModels.regionBehavior.icons);
+
+  // Add fonts
+  _configureFonts();
+
+  // Register sheet application classes
+  const DocumentSheetConfig = foundry.applications.apps.DocumentSheetConfig;
+  DocumentSheetConfig.unregisterSheet(Actor, "core", foundry.appv1.sheets.ActorSheet);
+  DocumentSheetConfig.registerSheet(Actor, "wuxia-system", applications.actor.CharacterActorSheet, {
+    types: ["character"],
+    makeDefault: true,
+    label: "DND5E.SheetClass.Character"
+  });
+  DocumentSheetConfig.registerSheet(Actor, "wuxia-system", applications.actor.NPCActorSheet, {
+    types: ["npc"],
+    makeDefault: true,
+    label: "DND5E.SheetClass.NPC"
+  });
+  DocumentSheetConfig.registerSheet(Actor, "wuxia-system", applications.actor.VehicleActorSheet, {
+    types: ["vehicle"],
+    makeDefault: true,
+    label: "DND5E.SheetClass.Vehicle"
+  });
+  DocumentSheetConfig.registerSheet(Actor, "wuxia-system", applications.actor.GroupActorSheet, {
+    types: ["group"],
+    makeDefault: true,
+    label: "DND5E.SheetClass.Group"
+  });
+  DocumentSheetConfig.registerSheet(Actor, "wuxia-system", applications.actor.EncounterActorSheet, {
+    types: ["encounter"],
+    makeDefault: true,
+    label: "DND5E.SheetClass.Encounter"
+  });
+
+  DocumentSheetConfig.unregisterSheet(Item, "core", foundry.appv1.sheets.ItemSheet);
+  DocumentSheetConfig.registerSheet(Item, "wuxia-system", applications.item.ItemSheet5e, {
+    makeDefault: true,
+    label: "DND5E.SheetClass.Item"
+  });
+  DocumentSheetConfig.unregisterSheet(Item, "wuxia-system", applications.item.ItemSheet5e, { types: ["container"] });
+  DocumentSheetConfig.registerSheet(Item, "wuxia-system", applications.item.ContainerSheet, {
+    makeDefault: true,
+    types: ["container"],
+    label: "DND5E.SheetClass.Container"
+  });
+  DocumentSheetConfig.unregisterSheet(Item, "wuxia-system", applications.item.ItemSheet5e, { types: ["hatsuTemplate"] });
+  DocumentSheetConfig.registerSheet(Item, "wuxia-system", applications.item.HatsuTemplateSheet, {
+    makeDefault: true,
+    types: ["hatsuTemplate"],
+    label: "TYPES.Item.hatsuTemplate"
+  });
+
+  DocumentSheetConfig.registerSheet(JournalEntry, "wuxia-system", applications.journal.JournalEntrySheet5e, {
+    makeDefault: true,
+    label: "DND5E.SheetClass.JournalEntry"
+  });
+  DocumentSheetConfig.registerSheet(JournalEntry, "wuxia-system", applications.journal.JournalSheet5e, {
+    makeDefault: false,
+    canConfigure: false,
+    canBeDefault: false,
+    label: "DND5E.SheetClass.JournalEntrySheetLegacy"
+  });
+  DocumentSheetConfig.registerSheet(JournalEntryPage, "wuxia-system", applications.journal.JournalClassPageSheet, {
+    label: "DND5E.SheetClass.ClassSummary",
+    types: ["class", "subclass"]
+  });
+  DocumentSheetConfig.registerSheet(JournalEntryPage, "wuxia-system", applications.journal.JournalMapLocationPageSheet, {
+    label: "DND5E.SheetClass.MapLocation",
+    types: ["map"]
+  });
+  DocumentSheetConfig.registerSheet(JournalEntryPage, "wuxia-system", applications.journal.JournalRulePageSheet, {
+    label: "DND5E.SheetClass.Rule",
+    types: ["rule"]
+  });
+  DocumentSheetConfig.registerSheet(JournalEntryPage, "wuxia-system", applications.journal.JournalSpellListPageSheet, {
+    label: "DND5E.SheetClass.SpellList",
+    types: ["spells"]
+  });
+
+  DocumentSheetConfig.unregisterSheet(RegionBehavior, "core", foundry.applications.sheets.RegionBehaviorConfig, {
+    types: ["dnd5e.difficultTerrain", "dnd5e.rotateArea"]
+  });
+  DocumentSheetConfig.registerSheet(RegionBehavior, "wuxia-system", applications.regionBehavior.DifficultTerrainConfig, {
+    label: "DND5E.SheetClass.DifficultTerrain",
+    types: ["dnd5e.difficultTerrain"]
+  });
+  DocumentSheetConfig.registerSheet(RegionBehavior, "wuxia-system", applications.regionBehavior.RotateAreaConfig, {
+    label: "DND5E.SheetClass.RotateArea",
+    types: ["dnd5e.rotateArea"]
+  });
+
+  DocumentSheetConfig.registerSheet(RollTable, "wuxia-system", applications.RollTableSheet5e, {
+    makeDefault: true,
+    label: "DND5E.SheetClass.RollTable"
+  });
+
+  CONFIG.Token.prototypeSheetClass = applications.PrototypeTokenConfig5e;
+  DocumentSheetConfig.unregisterSheet(TokenDocument, "core", foundry.applications.sheets.TokenConfig);
+  DocumentSheetConfig.registerSheet(TokenDocument, "wuxia-system", applications.TokenConfig5e, {
+    label: "DND5E.SheetClass.Token"
+  });
+
+  // Preload Handlebars helpers & partials
+  utils.registerHandlebarsHelpers();
+  utils.preloadHandlebarsTemplates();
+
+  // Enrichers
+  enrichers.registerCustomEnrichers();
+
+  // Exhaustion handling
+  documents.ActiveEffect5e.registerHUDListeners();
+
+  // Set up token movement actions
+  documents.TokenDocument5e.registerMovementActions();
+
+  // Custom movement cost aggregator
+  CONFIG.Token.movement.costAggregator = (results, distance, segment) => {
+    return Math.max(...results.map(i => i.cost));
+  };
+
+  // Setup Calendar
+  _configureCalendar();
+});
+
+/* -------------------------------------------- */
+
+/**
+ * Configure world calendar based on setting.
+ */
+function _configureCalendar() {
+  CONFIG.time.earthCalendarClass = dataModels.calendar.CalendarData5e;
+  CONFIG.time.worldCalendarClass = dataModels.calendar.CalendarData5e;
+
+  /**
+   * A hook event that fires during the `init` step to give modules a chance to customize the calendar
+   * configuration before loading the world calendar.
+   * @function dnd5e.preSetupCalendar
+   * @memberof hookEvents
+   * @returns               Explicitly return `false` to prevent system from setting up the calendar.
+   */
+  if ( Hooks.call("dnd5e.setupCalendar") === false ) return;
+
+  // Calendário Personalizado: injeta/atualiza a entrada "custom" na lista de
+  // calendários (montada a partir do setting `customCalendar`) antes de o mundo
+  // escolher qual usar — assim "Personalizado" aparece no seletor e, se estiver
+  // selecionado, o config construído vira o calendário do mundo.
+  {
+    const config = dataModels.calendar.buildCustomCalendarConfig(game.settings.get("wuxia-system", "customCalendar"));
+    const entry = { value: "custom", label: "Personalizado", config };
+    const list = CONFIG.DND5E.calendar.calendars;
+    const idx = list.findIndex(c => c.value === "custom");
+    if ( idx >= 0 ) list[idx] = entry; else list.push(entry);
+  }
+
+  const calendar = game.settings.get("wuxia-system", "calendar");
+  const calendarConfig = CONFIG.DND5E.calendar.calendars.find(c => c.value === calendar);
+  if ( calendarConfig ) {
+    CONFIG.time.worldCalendarConfig = calendarConfig.config;
+    if ( calendarConfig.class ) CONFIG.time.worldCalendarClass = calendarConfig.class;
+  }
+}
+
+/* -------------------------------------------- */
+
+/**
+ * Configure explicit lists of attributes that are trackable on the token HUD and in the combat tracker.
+ * @internal
+ */
+function _configureTrackableAttributes() {
+  const common = {
+    bar: [],
+    value: [
+      ...Object.keys(DND5E.abilities).map(ability => `abilities.${ability}.value`),
+      ...Object.keys(DND5E.movementTypes).map(movement => `attributes.movement.${movement}`),
+      "attributes.ac.value", "attributes.init.total"
+    ]
+  };
+
+  const creature = {
+    bar: [
+      ...common.bar,
+      "attributes.hp",
+      ..._trackedSpellAttributes()
+    ],
+    value: [
+      ...common.value,
+      ...Object.keys(DND5E.skills).map(skill => `skills.${skill}.passive`),
+      ...Object.keys(DND5E.senses).map(sense => `attributes.senses.ranges.${sense}`),
+      "attributes.hp.temp", "attributes.spell.attack", "attributes.spell.dc"
+    ]
+  };
+
+  CONFIG.Actor.trackableAttributes = {
+    character: {
+      bar: [...creature.bar, "resources.primary", "resources.secondary", "resources.tertiary", "details.xp"],
+      value: [...creature.value]
+    },
+    npc: {
+      bar: [...creature.bar, "resources.legact", "resources.legres"],
+      value: [...creature.value, "attributes.spell.level", "details.cr", "details.xp.value"]
+    },
+    vehicle: {
+      bar: [...common.bar, "attributes.hp"],
+      value: [...common.value]
+    },
+    group: {
+      bar: [],
+      value: []
+    }
+  };
+}
+
+/* -------------------------------------------- */
+
+/**
+ * Get all trackable spell slot attributes.
+ * @param {string} [suffix=""]  Suffix appended to the path.
+ * @returns {Set<string>}
+ * @internal
+ */
+function _trackedSpellAttributes(suffix="") {
+  return Object.entries(DND5E.spellcasting).reduce((acc, [k, v]) => {
+    if ( v.slots ) Array.fromRange(Object.keys(DND5E.spellLevels).length - 1, 1).forEach(l => {
+      acc.add(`spells.${v.getSpellSlotKey(l)}${suffix}`);
+    });
+    return acc;
+  }, new Set());
+}
+
+/* -------------------------------------------- */
+
+/**
+ * Configure which attributes are available for item consumption.
+ * @internal
+ */
+function _configureConsumableAttributes() {
+  CONFIG.DND5E.consumableResources = [
+    ...Object.keys(DND5E.abilities).map(ability => `abilities.${ability}.value`),
+    "attributes.ac.flat",
+    "attributes.hp.value",
+    "attributes.exhaustion",
+    ...Object.keys(DND5E.senses).map(sense => `attributes.senses.ranges.${sense}`),
+    ...Object.keys(DND5E.movementTypes).map(type => `attributes.movement.${type}`),
+    ...Object.keys(DND5E.currencies).map(denom => `currency.${denom}`),
+    "details.xp.value",
+    "resources.primary.value", "resources.secondary.value", "resources.tertiary.value",
+    "resources.legact.value", "resources.legres.value", "attributes.actions.value",
+    ..._trackedSpellAttributes(".value")
+  ];
+}
+
+/* -------------------------------------------- */
+
+/**
+ * Configure additional system fonts.
+ */
+function _configureFonts() {
+  Object.assign(CONFIG.fontDefinitions, {
+    Roboto: {
+      editor: true,
+      fonts: [
+        { urls: ["systems/wuxia-system/fonts/roboto/Roboto-Regular.woff2"] },
+        { urls: ["systems/wuxia-system/fonts/roboto/Roboto-Bold.woff2"], weight: "bold" },
+        { urls: ["systems/wuxia-system/fonts/roboto/Roboto-Italic.woff2"], style: "italic" },
+        { urls: ["systems/wuxia-system/fonts/roboto/Roboto-BoldItalic.woff2"], weight: "bold", style: "italic" }
+      ]
+    },
+    "Roboto Condensed": {
+      editor: true,
+      fonts: [
+        { urls: ["systems/wuxia-system/fonts/roboto-condensed/RobotoCondensed-Regular.woff2"] },
+        { urls: ["systems/wuxia-system/fonts/roboto-condensed/RobotoCondensed-Bold.woff2"], weight: "bold" },
+        { urls: ["systems/wuxia-system/fonts/roboto-condensed/RobotoCondensed-Italic.woff2"], style: "italic" },
+        {
+          urls: ["systems/wuxia-system/fonts/roboto-condensed/RobotoCondensed-BoldItalic.woff2"], weight: "bold",
+          style: "italic"
+        }
+      ]
+    },
+    "Roboto Slab": {
+      editor: true,
+      fonts: [
+        { urls: ["systems/wuxia-system/fonts/roboto-slab/RobotoSlab-Regular.ttf"] },
+        { urls: ["systems/wuxia-system/fonts/roboto-slab/RobotoSlab-Bold.ttf"], weight: "bold" }
+      ]
+    }
+  });
+}
+
+/* -------------------------------------------- */
+
+/**
+ * Configure system status effects.
+ */
+function _configureStatusEffects() {
+  const addEffect = (effects, {special, ...data}) => {
+    data = foundry.utils.deepClone(data);
+    data._id = utils.staticID(`dnd5e${data.id}`);
+    data.order ??= Infinity;
+    effects.push(data);
+    if ( special ) CONFIG.specialStatusEffects[special] = data.id;
+    if ( data.neverBlockMovement ) DND5E.neverBlockStatuses.add(data.id);
+  };
+  CONFIG.statusEffects = Object.entries(CONFIG.DND5E.statusEffects).reduce((arr, [id, data]) => {
+    const original = CONFIG.statusEffects.find(s => s.id === id);
+    addEffect(arr, foundry.utils.mergeObject(original ?? {}, { id, ...data }, { inplace: false }));
+    return arr;
+  }, []);
+  for ( const [id, data] of Object.entries(CONFIG.DND5E.conditionTypes) ) {
+    addEffect(CONFIG.statusEffects, { id, ...data });
+  }
+  for ( const [id, data] of Object.entries(CONFIG.DND5E.encumbrance.effects) ) {
+    addEffect(CONFIG.statusEffects, { id, ...data, hud: false });
+  }
+}
+
+/* -------------------------------------------- */
+/*  Foundry VTT Setup                           */
+/* -------------------------------------------- */
+
+/**
+ * Prepare attribute lists.
+ */
+Hooks.once("setup", function() {
+  // Configure trackable & consumable attributes.
+  _configureTrackableAttributes();
+  _configureConsumableAttributes();
+
+  CONFIG.DND5E.trackableAttributes = expandAttributeList(CONFIG.DND5E.trackableAttributes);
+  game.dnd5e.moduleArt.registerModuleArt();
+  Tooltips5e.activateListeners();
+  game.dnd5e.tooltips.observe();
+
+  // Register settings after modules have had a chance to initialize
+  registerDeferredSettings();
+
+  // Set up compendiums with custom applications & sorting
+  setupModulePacks();
+
+  // Create CSS for currencies
+  const style = document.createElement("style");
+  const currencies = append => Object.entries(CONFIG.DND5E.currencies)
+    .map(([key, { icon }]) => `&.${key}${append ?? ""} { background-image: url("${icon}"); }`);
+  style.innerHTML = `
+    :is(.dnd5e2, .dnd5e2-journal) :is(i, span).currency {
+      ${currencies().join("\n")}
+    }
+    .dnd5e2 .form-group label.label-icon.currency {
+      ${currencies("::after").join("\n")}
+    }
+  `;
+  document.head.append(style);
+});
+
+/* --------------------------------------------- */
+
+/**
+ * Expand a list of attribute paths into an object that can be traversed.
+ * @param {string[]} attributes  The initial attributes configuration.
+ * @returns {object}  The expanded object structure.
+ */
+function expandAttributeList(attributes) {
+  return attributes.reduce((obj, attr) => {
+    foundry.utils.setProperty(obj, attr, true);
+    return obj;
+  }, {});
+}
+
+/* --------------------------------------------- */
+
+/**
+ * Perform one-time pre-localization and sorting of some configuration objects
+ */
+Hooks.once("i18nInit", () => {
+  // Set up status effects. Explicitly performed after init and before prelocalization.
+  _configureStatusEffects();
+
+  if ( dnd5e.settings.rulesVersion === "legacy" ) {
+    const { translations, _fallback } = game.i18n;
+    foundry.utils.mergeObject(translations, {
+      "TYPES.Item": {
+        race: game.i18n.localize("TYPES.Item.raceLegacy"),
+        racePl: game.i18n.localize("TYPES.Item.raceLegacyPl")
+      },
+      DND5E: {
+        "Feature.Class.ArtificerPlan": game.i18n.localize("DND5E.Feature.Class.ArtificerInfusion"),
+        "Feature.Species": game.i18n.localize("DND5E.Feature.SpeciesLegacy"),
+        FlagsAlertHint: game.i18n.localize("DND5E.FlagsAlertHintLegacy"),
+        ItemSpeciesDetails: game.i18n.localize("DND5E.ItemSpeciesDetailsLegacy"),
+        "Language.Category.Rare": game.i18n.localize("DND5E.Language.Category.Exotic"),
+        "MOVEMENT.Type.Speed": game.i18n.localize("DND5E.MOVEMENT.Type.Walk"),
+        RacialTraits: game.i18n.localize("DND5E.RacialTraitsLegacy"),
+        "REST.Long.Hint.Normal": game.i18n.localize("DND5E.REST.Long.Hint.NormalLegacy"),
+        "REST.Long.Hint.Group": game.i18n.localize("DND5E.REST.Long.Hint.GroupLegacy"),
+        "Species.Add": game.i18n.localize("DND5E.Species.AddLegacy"),
+        "Species.Features": game.i18n.localize("DND5E.Species.FeaturesLegacy"),
+        "TARGET.Type.Emanation": foundry.utils.mergeObject(
+          _fallback.DND5E?.TARGET?.Type?.Radius ?? {},
+          translations.DND5E?.TARGET?.Type?.Radius ?? {},
+          { inplace: false }
+        ),
+        TraitArmorPlural: foundry.utils.mergeObject(
+          _fallback.DND5E?.TraitArmorLegacyPlural ?? {},
+          translations.DND5E?.TraitArmorLegacyPlural ?? {},
+          { inplace: false }
+        ),
+        TraitArmorProf: game.i18n.localize("DND5E.TraitArmorLegacyProf")
+      }
+    });
+  }
+  utils.performPreLocalization(CONFIG.DND5E);
+  Object.values(CONFIG.DND5E.activityTypes).forEach(c => c.documentClass.localize());
+  Object.values(CONFIG.DND5E.advancementTypes).forEach(c => c.documentClass.localize());
+  foundry.helpers.Localization.localizeDataModel(dataModels.settings.CalendarConfigSetting);
+  foundry.helpers.Localization.localizeDataModel(dataModels.settings.CalendarPreferencesSetting);
+  foundry.helpers.Localization.localizeDataModel(dataModels.settings.TransformationSetting);
+
+  // Spellcasting
+  dataModels.spellcasting.SpellcastingModel.fromConfig();
+});
+
+/* -------------------------------------------- */
+/*  Foundry VTT Ready                           */
+/* -------------------------------------------- */
+
+/**
+ * Once the entire VTT framework is initialized, check to see if we should perform a data migration
+ */
+Hooks.once("ready", function() {
+
+  // ── HUNTER: richTooltip para JournalEntryPage do compendium de perícias ──
+  // O Tooltips5e chama doc.richTooltip() ao fazer hover em skills.
+  // JournalEntryPage de tipo "text" não tem esse método — adicionamos via patch.
+  if ( !JournalEntryPage.prototype.richTooltip ) {
+    JournalEntryPage.prototype.richTooltip = async function() {
+      // Só processa páginas do nosso compendium de conteúdo
+      if ( this.pack !== "wuxia-system.conteudo" ) return {};
+      const content = this.text?.content;
+      if ( !content ) return {};
+      // Renderiza o conteúdo enriquecido
+      const enriched = await foundry.applications.ux.TextEditor.implementation.enrichHTML(content, { relativeTo: this });
+      return {
+        content: `<div class="dnd5e2 dnd5e-tooltip hunter-skill-tooltip">
+          <h3 class="tooltip-header">${this.name}</h3>
+          <div class="tooltip-body">${enriched}</div>
+        </div>`,
+        classes: ["themed", "theme-light"]
+      };
+    };
+    console.log("Hunter | richTooltip patch aplicado em JournalEntryPage");
+  }
+
+  // Wait to register hotbar drop hook on ready so that modules could register earlier if they want to
+  Hooks.on("hotbarDrop", (bar, data, slot) => {
+    if ( ["ActiveEffect", "Activity", "Item"].includes(data.type) ) {
+      documents.macro.create5eMacro(data, slot);
+      return false;
+    }
+  });
+
+  // Adjust sourced items on actors now that compendium UUID redirects have been initialized
+  game.actors.forEach(a => a.sourcedItems._redirectKeys());
+
+  // Register items by type
+  dnd5e.registry.classes.initialize();
+  dnd5e.registry.subclasses.initialize();
+
+  // Chat message listeners
+  documents.ChatMessage5e.activateListeners();
+
+  // Bastion initialization
+  game.dnd5e.bastion.initializeUI();
+
+  // Display the calendar HUD
+  if ( CONFIG.DND5E.calendar.application ) {
+    dnd5e.ui.calendar = new CONFIG.DND5E.calendar.application();
+    dnd5e.ui.calendar.render({ force: true });
+  }
+
+  // Determine whether a system migration is required and feasible
+  if ( !game.user.isGM ) return;
+  const cv = game.settings.get("wuxia-system", "systemMigrationVersion") || game.world.flags.JujutsuLegacy?.version;
+  const totalDocuments = game.actors.size + game.scenes.size + game.items.size;
+  if ( !cv && totalDocuments === 0 ) return game.settings.set("wuxia-system", "systemMigrationVersion", game.system.version);
+  if ( cv && !foundry.utils.isNewerVersion(game.system.flags.needsMigrationVersion, cv) ) return;
+
+  // Compendium pack folder migration.
+  if ( foundry.utils.isNewerVersion("3.0.0", cv) ) {
+    migrations.reparentCompendiums("DnD5e SRD Content", "D&D SRD Content");
+  }
+
+  // Perform the migration
+  if ( cv && foundry.utils.isNewerVersion(game.system.flags.compatibleMigrationVersion, cv) ) {
+    ui.notifications.error("MIGRATION.5eVersionTooOldWarning", {localize: true, permanent: true});
+  }
+  migrations.migrateWorld();
+});
+
+/* -------------------------------------------- */
+/*  System Styling                              */
+/* -------------------------------------------- */
+
+Hooks.on("renderGamePause", (app, html) => {
+  if ( Hooks.events.renderGamePause.length > 1 ) return;
+  html.classList.add("dnd5e2");
+  const container = document.createElement("div");
+  container.classList.add("flexcol");
+  container.append(...html.children);
+  html.append(container);
+  const img = html.querySelector("img");
+  img.src = "systems/wuxia-system/ui/official/ampersand.png";  img.style.width = "200px";
+  img.style.height = "200px";
+  img.style.objectFit = "contain";
+  img.className = "";
+
+  container.style.display = "flex";
+  container.style.justifyContent = "center";
+  container.style.alignItems = "center";
+});
+
+Hooks.on("renderSettings", (app, html) => applications.settings.sidebar.renderSettings(html));
+
+/* -------------------------------------------- */
+/*  Other Hooks                                 */
+/* -------------------------------------------- */
+
+Hooks.on("applyCompendiumArt", (documentClass, ...args) => documentClass.applyCompendiumArt?.(...args));
+
+Hooks.on("renderChatPopout", documents.ChatMessage5e.onRenderChatPopout);
+Hooks.on("getChatMessageContextOptions", documents.ChatMessage5e.addChatMessageContextOptions);
+
+Hooks.on("renderChatLog", (app, html, data) => {
+  documents.Item5e.chatListeners(html);
+  documents.ChatMessage5e.onRenderChatLog(html);
+});
+Hooks.on("renderChatPopout", (app, html, data) => documents.Item5e.chatListeners(html));
+
+Hooks.on("chatMessage", (app, message, data) => applications.Award.chatMessage(message));
+Hooks.on("createChatMessage", dataModels.chatMessage.RequestMessageData.onCreateMessage);
+Hooks.on("updateChatMessage", dataModels.chatMessage.RequestMessageData.onUpdateResultMessage);
+
+Hooks.on("renderActorDirectory", (app, html, data) => documents.Actor5e.onRenderActorDirectory(html));
+
+Hooks.on("getActorContextOptions", documents.Actor5e.addDirectoryContextOptions);
+Hooks.on("getItemContextOptions", documents.Item5e.addDirectoryContextOptions);
+
+Hooks.on("renderCompendiumDirectory", (app, html) => applications.CompendiumBrowser.injectSidebarButton(html));
+
+Hooks.on("renderJournalEntryPageSheet", applications.journal.JournalEntrySheet5e.onRenderJournalPageSheet);
+
+Hooks.on("renderActiveEffectConfig", documents.ActiveEffect5e.onRenderActiveEffectConfig);
+
+Hooks.on("renderDocumentSheetConfig", (app, html) => {
+  const { document } = app.options;
+  if ( (document instanceof Actor) && document.system.isGroup ) {
+    applications.actor.MultiActorSheet.addDocumentSheetConfigOptions(app, html);
+  }
+});
+
+Hooks.on("targetToken", canvas.Token5e.onTargetToken);
+
+// Abre a Criação de Personagem (fullscreen) ao criar um personagem novo,
+// SE o módulo de conteúdo `hunter-legacy-module` estiver ativo. Sem ele, cria a ficha normal.
+Hooks.on("createActor", (actor, options, userId) => {
+  const C = applications.actor.HunterCharacterCreation;
+  const log = (...a) => console.log("HunterCreation | createActor:", ...a);
+  if ( game.user.id !== userId ) return log("ignorado (outro usuário criou)");
+  if ( actor.type !== "character" ) return log("ignorado (type =", actor.type, ")");
+  if ( !game.settings.get("wuxia-system", "characterCreationEnabled") ) return log("ignorado (desabilitada nas configurações)");
+  if ( options?.fromCompendium || options?.keepId || options?.noHook ) return log("ignorado (import/duplicação)");
+  if ( (actor.items?.size ?? 0) > 0 ) return log("ignorado (já tem itens:", actor.items.size, ")");
+  if ( !C?.isAvailable() ) return log("ignorado (hunter-legacy-module não está ativo) — módulo:",
+    game.modules.get("hunter-legacy-module")?.active);
+  log("abrindo a tela de criação para", actor.name);
+  const app = new C({ actor });
+  app.render(true)
+    .then(() => log("render OK"))
+    .catch(err => console.error("HunterCreation | FALHA no render:", err));
+});
+
+// Helper de teste: abra a tela manualmente pelo console com
+//   game.hunterCreation(game.actors.getName("NOME"))                      (nível 1)
+//   game.hunterCreation(game.actors.getName("NOME"), true)                (nível 2)
+Hooks.once("ready", () => {
+  game.hunterCreation = (actor, levelup = false) => new applications.actor.HunterCharacterCreation({
+    actor: actor ?? game.user.character, levelup
+  }).render(true);
+});
+
+// Gatilho de NÍVEL 2: quando o personagem atinge o nível 2 e ainda está com a
+// classe "Sem Categoria", reabre a tela de criação (modo levelup) para escolher a Categoria.
+const _l2Open = new Set();
+function hunterMaybeLevel2(actor) {
+  const C = applications.actor.HunterCharacterCreation;
+  if ( !C?.isAvailable() ) return;
+  if ( !game.settings.get("wuxia-system", "characterCreationEnabled") ) return;
+  if ( !actor || actor.documentName !== "Actor" || actor.type !== "character" || !actor.isOwner ) return;
+  if ( (actor.system?.details?.level ?? 1) < 2 ) return;
+  const norm = s => (s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const hasSem = actor.items.some(i => i.type === "class" && norm(i.name) === "sem categoria");
+  if ( !hasSem || _l2Open.has(actor.id) ) return;
+  _l2Open.add(actor.id);
+  console.log("HunterCreation | nível 2 atingido, abrindo seleção de Categoria para", actor.name);
+  new C({ actor, levelup: true }).render(true).catch(err => {
+    console.error("HunterCreation | falha ao abrir levelup:", err); _l2Open.delete(actor.id);
+  });
+}
+// Só o cliente que fez a mudança abre a tela (evita abrir em todos os donos/GM).
+Hooks.on("updateActor", (actor, changes, options, userId) => {
+  if ( userId === game.user.id ) hunterMaybeLevel2(actor);
+});
+Hooks.on("updateItem", (item, changes, options, userId) => {
+  if ( userId === game.user.id && item.parent?.documentName === "Actor" ) hunterMaybeLevel2(item.parent);
+});
+Hooks.on("closeHunterCharacterCreation", app => { if ( app.actor ) _l2Open.delete(app.actor.id); });
+
+// Abrir a FICHA de um personagem que ainda está sem Categoria (classe) OU sem Espécie
+// (raça) reabre a Criação — fica pedindo enquanto faltar um dos dois.
+function hunterMaybeCreationOnOpen(actor) {
+  const C = applications.actor.HunterCharacterCreation;
+  if ( !C?.isAvailable() ) return;
+  if ( !game.settings.get("wuxia-system", "characterCreationEnabled") ) return;
+  if ( !actor || actor.documentName !== "Actor" || actor.type !== "character" || !actor.isOwner ) return;
+  const hasCategoria = actor.items.some(i => i.type === "class");   // Categoria = item de classe
+  const hasEspecie   = actor.items.some(i => i.type === "race");    // Espécie = item de raça
+  if ( hasCategoria && hasEspecie ) return;                          // tem os dois → não abre
+  if ( foundry.applications?.instances?.get?.("hunter-character-creation") ) return; // já aberta
+  console.log("HunterCreation | ficha sem Categoria/Espécie — abrindo criação para", actor.name);
+  new C({ actor }).render(true).catch(err => console.error("HunterCreation | falha ao auto-abrir na ficha:", err));
+}
+Hooks.on("renderCharacterActorSheet", app => hunterMaybeCreationOnOpen(app.actor ?? app.document));
+
+/* -------------------------------------------- */
+
+// Reparo de Vida: personagens criados antes do fix ficaram com o advancement de Pontos de
+// Vida vazio → hp.max = 0. Preenche o `value` por nível (nível 1 = máximo, demais = média)
+// SÓ onde falta (preserva rolagens existentes) e enche a Vida se estiver quebrada (≤ 0).
+// Idempotente. Roda uma vez (só GM) e fica exposto em game.hunterRepairHP() para reexecução.
+async function _repairCharacterHP(actor) {
+  if ( actor?.type !== "character" ) return false;
+  let changed = false;
+  for ( const cls of actor.items.filter(i => i.type === "class") ) {
+    // system.advancement é uma coleção keyed por _id; usa o getter e atualiza pelo id.
+    const hpAdv = cls.advancement?.byType?.HitPoints?.[0];
+    if ( !hpAdv ) continue;
+    const value = { ...(hpAdv.value ?? {}) };
+    let touched = false;
+    for ( let l = 1; l <= (cls.system?.levels || 1); l++ ) {
+      if ( value[l] == null ) { value[l] = (l === 1) ? "max" : "avg"; touched = true; }
+    }
+    if ( touched ) { await cls.update({ [`system.advancement.${hpAdv.id}.value`]: value }); changed = true; }
+  }
+  if ( changed ) {
+    const hpMax = actor.system.attributes.hp.max;
+    if ( Number.isFinite(hpMax) && (hpMax > 0) && !(actor.system.attributes.hp.value > 0) ) {
+      await actor.update({ "system.attributes.hp.value": hpMax });
+    }
+  }
+  return changed;
+}
+
+Hooks.once("ready", async () => {
+  // Gatilho manual (qualquer hora): game.hunterRepairHP()
+  game.hunterRepairHP = async () => {
+    let n = 0;
+    for ( const a of game.actors ) {
+      try { if ( await _repairCharacterHP(a) ) n++; } catch ( e ) { console.error("Hunter | reparo de Vida:", a?.name, e); }
+    }
+    ui.notifications.info(`Reparo de Vida: ${n} personagem(ns) restaurado(s).`);
+    return n;
+  };
+  // Execução automática única (só o GM escreve).
+  if ( !game.user.isGM ) return;
+  let done = true;
+  try { done = game.settings.get("wuxia-system", "hpAdvancementRepairDone"); } catch { return; }
+  if ( done ) return;
+  let n = 0, errored = false;
+  for ( const a of game.actors ) {
+    try { if ( await _repairCharacterHP(a) ) n++; }
+    catch ( e ) { errored = true; console.error("Hunter | reparo de Vida:", a?.name, e); }
+  }
+  // Só marca como concluído num passe sem erros — assim uma falha tenta de novo no próximo load.
+  if ( !errored ) { try { await game.settings.set("wuxia-system", "hpAdvancementRepairDone", true); } catch {} }
+  if ( n ) ui.notifications.info(`Reparo de Vida: ${n} personagem(ns) com a Vida restaurada.`);
+});
+
+// A barra de Vida/Vitalidade do token que reflete a pool ativa (aura on → Vida, off →
+// Vitalidade) é resolvida em TokenDocument5e.getBarAttribute (module/documents/token.mjs) —
+// robusto por render, sem depender de hooks de troca do atributo salvo.
+
+Hooks.on("renderCombatTracker", (app, html, data) => app.renderGroups(html));
+
+Hooks.on("preCreateScene", (doc, createData, options, userId) => {
+  // Set default grid units based on metric length setting
+  const units = utils.defaultUnits("length");
+  if ( (units !== dnd5e.grid.units) && !foundry.utils.getProperty(createData, "grid.distance")
+    && !foundry.utils.getProperty(createData, "grid.units") ) {
+    doc.updateSource({
+      grid: { distance: utils.convertLength(dnd5e.grid.distance, dnd5e.grid.units, units, { strict: false }), units }
+    });
+  }
+});
+
+Hooks.on("updateWorldTime", (...args) => {
+  dataModels.calendar.CalendarData5e.onUpdateWorldTime(...args);
+  CONFIG.DND5E.calendar.application?.onUpdateWorldTime?.(...args);
+});
+
+/* -------------------------------------------- */
+/*  Bundled Module Exports                      */
+/* -------------------------------------------- */
+
+export {
+  applications,
+  canvas,
+  dataModels,
+  dice,
+  documents,
+  enrichers,
+  Filter,
+  migrations,
+  registry,
+  utils,
+  DND5E
+};

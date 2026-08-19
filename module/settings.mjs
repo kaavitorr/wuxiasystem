@@ -1,0 +1,877 @@
+import CompendiumBrowser from "./applications/compendium-browser.mjs";
+import CalendarMonthView from "./applications/calendar/calendar-month-view.mjs";
+// BastionSettingsConfig: menu de Bastiões removido da UI (classe segue exportada no barrel)
+import CalendarSettingsConfig from "./applications/settings/calendar-settings.mjs";
+import CustomCalendarConfig from "./applications/settings/custom-calendar-settings.mjs";
+import CombatSettingsConfig from "./applications/settings/combat-settings.mjs";
+import CompendiumBrowserSettingsConfig from "./applications/settings/compendium-browser-settings.mjs";
+import ModuleArtSettingsConfig from "./applications/settings/module-art-settings.mjs";
+import VariantRulesSettingsConfig from "./applications/settings/variant-rules-settings.mjs";
+import VisibilitySettingsConfig from "./applications/settings/visibility-settings.mjs";
+import BastionSetting from "./data/settings/bastion-setting.mjs";
+import { CalendarConfigSetting, CalendarPreferencesSetting } from "./data/settings/calendar-setting.mjs";
+import CustomCalendarSetting from "./data/settings/custom-calendar-setting.mjs";
+import PrimaryPartySetting from "./data/settings/primary-party-setting.mjs";
+import TransformationSetting from "./data/settings/transformation-setting.mjs";
+import * as LEGACY from "./config-legacy.mjs";
+
+const { StringField } = foundry.data.fields;
+
+/**
+ * Register all of the system's keybindings.
+ */
+export function registerSystemKeybindings() {
+  game.keybindings.register("wuxia-system", "skipDialogNormal", {
+    name: "KEYBINDINGS.DND5E.SkipDialogNormal",
+    editable: [{ key: "ShiftLeft" }, { key: "ShiftRight" }]
+  });
+
+  game.keybindings.register("wuxia-system", "skipDialogAdvantage", {
+    name: "KEYBINDINGS.DND5E.SkipDialogAdvantage",
+    editable: [{ key: "AltLeft" }, { key: "AltRight" }]
+  });
+
+  game.keybindings.register("wuxia-system", "skipDialogDisadvantage", {
+    name: "KEYBINDINGS.DND5E.SkipDialogDisadvantage",
+    editable: [{ key: "ControlLeft" }, { key: "ControlRight" }, { key: "OsLeft" }, { key: "OsRight" }]
+  });
+
+  game.keybindings.register("wuxia-system", "dragCopy", {
+    name: "KEYBINDINGS.DND5E.DragCopy",
+    editable: [{ key: "ControlLeft" }, { key: "ControlRight" }, { key: "AltLeft" }, { key: "AltRight" }]
+  });
+
+  game.keybindings.register("wuxia-system", "dragMove", {
+    name: "KEYBINDINGS.DND5E.DragMove",
+    editable: [{ key: "ShiftLeft" }, { key: "ShiftRight" }, { key: "OsLeft" }, { key: "OsRight" }]
+  });
+}
+
+/* -------------------------------------------- */
+
+/**
+ * Register all of the system's settings.
+ */
+export function registerSystemSettings() {
+  // Internal System Migration Version
+  game.settings.register("wuxia-system", "systemMigrationVersion", {
+    name: "System Migration Version",
+    scope: "world",
+    config: false,
+    type: String,
+    default: ""
+  });
+
+  // Idioma do Sistema — seletor próprio do Hunter (por cliente). Sobrepõe as strings
+  // do sistema no idioma escolhido, independente do idioma do Foundry (ver
+  // module/hunter-language.mjs). Recarrega ao mudar para reaplicar a tradução.
+  game.settings.register("wuxia-system", "interfaceLanguage", {
+    name: "HUNTER.Settings.Language.Name",
+    hint: "HUNTER.Settings.Language.Hint",
+    scope: "client",
+    config: true,
+    type: String,
+    default: "pt-BR",
+    choices: { "pt-BR": "Português (Brasil)", en: "English" },
+    requiresReload: true
+  });
+
+  // Criação de Personagem (tela fullscreen): permite ao Narrador desligar os
+  // gatilhos automáticos (ator novo, nível 2, ficha incompleta). O helper manual
+  // game.hunterCreation(...) continua funcionando mesmo desabilitada.
+  game.settings.register("wuxia-system", "characterCreationEnabled", {
+    name: "Criação de Personagem",
+    hint: "Abre a tela de Criação de Personagem automaticamente (ator novo, nível 2 e ficha sem Categoria/Espécie). Desmarque para desativar os gatilhos automáticos.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
+  // Espécies customizadas (editor da Criação de Personagem — só Narrador edita).
+  // Array de { id, name, img, desc }. Persistente/mundo → oficial para todos.
+  game.settings.register("wuxia-system", "customSpecies", {
+    scope: "world",
+    config: false,
+    type: Array,
+    default: []
+  });
+
+  // Polymorph Settings
+  game.settings.register("wuxia-system", "transformationSettings", {
+    scope: "client",
+    config: false,
+    type: TransformationSetting
+  });
+
+  // Rules version — fixo nas regras modernas (2024); opção escondida da UI
+  game.settings.register("wuxia-system", "rulesVersion", {
+    name: "SETTINGS.DND5E.RULESVERSION.Name",
+    hint: "SETTINGS.DND5E.RULESVERSION.Hint",
+    scope: "world",
+    config: false,
+    default: "modern",
+    type: String,
+    choices: {
+      modern: "SETTINGS.DND5E.RULESVERSION.Modern",
+      legacy: "SETTINGS.DND5E.RULESVERSION.Legacy"
+    },
+    requiresReload: true
+  });
+
+  // Movement automation
+  game.settings.register("wuxia-system", "movementAutomation", {
+    name: "SETTINGS.DND5E.AUTOMATION.Movement.Name",
+    hint: "SETTINGS.DND5E.AUTOMATION.Movement.Hint",
+    scope: "world",
+    config: true,
+    default: "full",
+    type: String,
+    choices: {
+      full: "SETTINGS.DND5E.AUTOMATION.Movement.Full",
+      noBlocking: "SETTINGS.DND5E.AUTOMATION.Movement.NoBlocking",
+      none: "SETTINGS.DND5E.AUTOMATION.Movement.None"
+    }
+  });
+
+  // Allow rotating square templates
+  game.settings.register("wuxia-system", "gridAlignedSquareTemplates", {
+    name: "SETTINGS.5eGridAlignedSquareTemplatesN",
+    hint: "SETTINGS.5eGridAlignedSquareTemplatesL",
+    scope: "world",
+    config: true,
+    default: true,
+    type: Boolean
+  });
+
+  // Loyalty — escondido da UI (não usamos rastreamento de lealdade)
+  game.settings.register("wuxia-system", "loyaltyScore", {
+    name: "SETTINGS.DND5E.LOYALTY.Name",
+    hint: "SETTINGS.DND5E.LOYALTY.Hint",
+    scope: "world",
+    config: false,
+    default: false,
+    type: Boolean
+  });
+
+  // Disable Advancements
+  game.settings.register("wuxia-system", "disableAdvancements", {
+    name: "SETTINGS.5eNoAdvancementsN",
+    hint: "SETTINGS.5eNoAdvancementsL",
+    scope: "world",
+    config: true,
+    default: false,
+    type: Boolean
+  });
+
+  // Disable Concentration Tracking
+  game.settings.register("wuxia-system", "disableConcentration", {
+    name: "SETTINGS.5eNoConcentrationN",
+    hint: "SETTINGS.5eNoConcentrationL",
+    scope: "world",
+    config: true,
+    default: false,
+    type: Boolean
+  });
+
+  // Collapse Item Cards (by default)
+  game.settings.register("wuxia-system", "autoCollapseItemCards", {
+    name: "SETTINGS.5eAutoCollapseCardN",
+    hint: "SETTINGS.5eAutoCollapseCardL",
+    scope: "client",
+    config: true,
+    default: false,
+    type: Boolean,
+    onChange: s => {
+      ui.chat.render();
+    }
+  });
+
+  // Collapse Chat Card Trays
+  game.settings.register("wuxia-system", "autoCollapseChatTrays", {
+    name: "SETTINGS.DND5E.COLLAPSETRAYS.Name",
+    hint: "SETTINGS.DND5E.COLLAPSETRAYS.Hint",
+    scope: "client",
+    config: true,
+    default: "older",
+    type: String,
+    choices: {
+      manual: "SETTINGS.DND5E.COLLAPSETRAYS.Manual",
+      never: "SETTINGS.DND5E.COLLAPSETRAYS.Never",
+      older: "SETTINGS.DND5E.COLLAPSETRAYS.Older",
+      always: "SETTINGS.DND5E.COLLAPSETRAYS.Always"
+    }
+  });
+
+  // Allow Rests from Sheet
+  game.settings.register("wuxia-system", "allowRests", {
+    name: "SETTINGS.DND5E.PERMISSIONS.AllowRests.Name",
+    hint: "SETTINGS.DND5E.PERMISSIONS.AllowRests.Hint",
+    scope: "world",
+    config: true,
+    default: true,
+    type: Boolean
+  });
+
+  // Allow Polymorphing
+  game.settings.register("wuxia-system", "allowPolymorphing", {
+    name: "SETTINGS.DND5E.PERMISSIONS.AllowTransformation.Name",
+    hint: "SETTINGS.DND5E.PERMISSIONS.AllowTransformation.Hint",
+    scope: "world",
+    config: true,
+    default: false,
+    type: Boolean
+  });
+
+  // Allow Summoning
+  game.settings.register("wuxia-system", "allowSummoning", {
+    name: "SETTINGS.DND5E.PERMISSIONS.AllowSummoning.Name",
+    hint: "SETTINGS.DND5E.PERMISSIONS.AllowSummoning.Hint",
+    scope: "world",
+    config: true,
+    default: false,
+    type: Boolean
+  });
+
+  // Metric Length Weights
+  game.settings.register("wuxia-system", "metricLengthUnits", {
+    name: "SETTINGS.DND5E.METRIC.LengthUnits.Name",
+    hint: "SETTINGS.DND5E.METRIC.LengthUnits.Hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
+  });
+
+  // Metric Volume Weights
+  game.settings.register("wuxia-system", "metricVolumeUnits", {
+    name: "SETTINGS.DND5E.METRIC.VolumeUnits.Name",
+    hint: "SETTINGS.DND5E.METRIC.VolumeUnits.Hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
+  });
+
+  // Metric Unit Weights
+  game.settings.register("wuxia-system", "metricWeightUnits", {
+    name: "SETTINGS.DND5E.METRIC.WeightUnits.Name",
+    hint: "SETTINGS.DND5E.METRIC.WeightUnits.Hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
+  });
+
+  // Strict validation
+  game.settings.register("wuxia-system", "strictValidation", {
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: true
+  });
+
+  // Dynamic art.
+  game.settings.registerMenu("wuxia-system", "moduleArtConfiguration", {
+    name: "DND5E.ModuleArtConfigN",
+    label: "DND5E.ModuleArtConfigL",
+    hint: "DND5E.ModuleArtConfigH",
+    icon: "fa-solid fa-palette",
+    type: ModuleArtSettingsConfig,
+    restricted: true
+  });
+
+  game.settings.register("wuxia-system", "moduleArtConfiguration", {
+    name: "Module Art Configuration",
+    scope: "world",
+    config: false,
+    type: Object,
+    default: {
+      dnd5e: {
+        portraits: true,
+        tokens: true
+      }
+    }
+  });
+
+  // Compendium Browser source exclusion
+  game.settings.registerMenu("wuxia-system", "packSourceConfiguration", {
+    name: "DND5E.CompendiumBrowser.Sources.Name",
+    label: "DND5E.CompendiumBrowser.Sources.Label",
+    hint: "DND5E.CompendiumBrowser.Sources.Hint",
+    icon: "fas fa-book-open-reader",
+    type: CompendiumBrowserSettingsConfig,
+    restricted: true
+  });
+
+  game.settings.register("wuxia-system", "packSourceConfiguration", {
+    name: "Pack Source Configuration",
+    scope: "world",
+    config: false,
+    type: Object,
+    default: {},
+    onChange: () => {
+      // Refresh all open Compendium Browser instances when source configuration changes
+      foundry.applications.instances.forEach(app => {
+        if ( app instanceof CompendiumBrowser ) {
+          app.render({ parts: ["results", "filters"], changedTab: true });
+        }
+      });
+    }
+  });
+
+  // Bastions — menu removido da UI (sistema não usa Bastiões); o setting de dados
+  // continua registrado (enabled: false) para o código do dnd5e que o lê.
+  game.settings.register("wuxia-system", "bastionConfiguration", {
+    name: "Bastion Configuration",
+    scope: "world",
+    config: false,
+    type: BastionSetting,
+    default: {
+      button: false,
+      enabled: false,
+      duration: 7
+    },
+    onChange: () => game.dnd5e.bastion.initializeUI()
+  });
+
+  // Calendar Settings
+  game.settings.registerMenu("wuxia-system", "calendarConfiguration", {
+    name: "DND5E.CALENDAR.Configuration.Name",
+    label: "DND5E.CALENDAR.Configuration.Label",
+    hint: "DND5E.CALENDAR.Configuration.Hint",
+    icon: "fas fa-calendar-days",
+    type: CalendarSettingsConfig
+  });
+
+  // Calendário Personalizado: define meses/ano, dias/mês, horas/dia, dias/semana
+  // e nomes — o calendário do mundo "custom" é montado a partir disto no init.
+  game.settings.registerMenu("wuxia-system", "customCalendarConfiguration", {
+    name: "Calendário Personalizado",
+    label: "Configurar Calendário Personalizado",
+    hint: "Meses por ano, dias por mês, horas por dia e dias por semana, para mundos diferentes.",
+    icon: "fas fa-earth-americas",
+    type: CustomCalendarConfig
+  });
+
+  game.settings.register("wuxia-system", "customCalendar", {
+    name: "Calendário Personalizado",
+    scope: "world",
+    config: false,
+    type: CustomCalendarSetting,
+    requiresReload: true
+  });
+
+  game.settings.register("wuxia-system", "calendar", {
+    name: "DND5E.CALENDAR.FIELDS.calendar.label",
+    hint: "DND5E.CALENDAR.FIELDS.calendar.hint",
+    scope: "world",
+    config: false,
+    type: new StringField({
+      required: true, blank: false, initial: "gregorian", choices: () => Object.fromEntries(
+        CONFIG.DND5E.calendar.calendars.map(({ value, label }) => [value, label])
+      )
+    }),
+    requiresReload: true
+  });
+
+  game.settings.register("wuxia-system", "calendarConfig", {
+    name: "Calendar Configuration",
+    scope: "world",
+    config: false,
+    type: CalendarConfigSetting,
+    onChange: value => {
+      dnd5e.ui.calendar?.onUpdateSettings?.();
+      // Desligar o calendário para o mundo inteiro (diferente de uma preferência pessoal de
+      // visibilidade) também deve parar o avanço automático — sem isso, o cliente que estava
+      // tocando o tempo continuaria tocando escondido, sem nenhum botão visível para pará-lo.
+      if ( !value?.enabled ) {
+        const current = game.settings.get("wuxia-system", "calendarAutoTime") ?? {};
+        if ( current.active && (current.userId === game.user.id) ) {
+          game.settings.set("wuxia-system", "calendarAutoTime", { active: false, userId: null });
+        }
+      }
+    }
+  });
+
+  game.settings.register("wuxia-system", "calendarPreferences", {
+    name: "Calendar Preferences",
+    scope: "user",
+    config: false,
+    type: CalendarPreferencesSetting,
+    onChange: () => dnd5e.ui.calendar?.onUpdateSettings?.()
+  });
+
+  // Calendar Day Data — fases da lua (públicas) e notas do narrador (só GM) por dia.
+  // Chave: "<ano>-<mêsIndex>-<dia1based>" → { moon: string|null, note: string }
+  game.settings.register("wuxia-system", "calendarDayData", {
+    name: "Calendar Day Data",
+    scope: "world",
+    config: false,
+    type: Object,
+    default: {},
+    onChange: () => CalendarMonthView.refreshOpen()
+  });
+
+  // Calendar Auto Time — estado compartilhado do avanço automático do tempo.
+  // Fonte única de verdade entre clientes: só o cliente cujo userId consta aqui roda o
+  // relógio (evita dois GMs avançando o tempo em dobro), e o onChange sincroniza o botão
+  // play/pause em todos os clientes.
+  game.settings.register("wuxia-system", "calendarAutoTime", {
+    name: "Calendar Auto Time",
+    scope: "world",
+    config: false,
+    type: Object,
+    default: { active: false, userId: null },
+    onChange: () => dnd5e.ui.calendar?._syncAutoTimeState?.()
+  });
+
+  // Ritmo do tempo automático FORA de combate: a cada `intervalSeconds` reais, avança
+  // `amount` `unit`. Configurável pelo botão direito no relógio (ver CalendarHUD#configureTime).
+  game.settings.register("wuxia-system", "calendarAutoTimeRate", {
+    name: "Ritmo do Tempo Automático",
+    scope: "world",
+    config: false,
+    type: Object,
+    default: { intervalSeconds: 10, amount: 5, unit: "minute" },
+    onChange: () => dnd5e.ui.calendar?._resyncAutoTime?.()
+  });
+
+  // Segundos de mundo avançados por rodada de combate. O Foundry usa CONFIG.time.roundTime
+  // para adiantar o relógio a cada rodada; este setting o alimenta (ex.: 60 = 1 min/rodada).
+  game.settings.register("wuxia-system", "calendarCombatRoundSeconds", {
+    name: "Segundos por Rodada de Combate",
+    scope: "world",
+    config: false,
+    type: Number,
+    default: 6,
+    onChange: value => { CONFIG.time.roundTime = Math.max(0, Number(value) || 6); }
+  });
+
+  // Marca se o reparo único de Vida (advancement de Pontos de Vida dos personagens criados
+  // antes do fix) já rodou. Ver dnd5e.mjs → _repairCharacterHP / game.hunterRepairHP.
+  game.settings.register("wuxia-system", "hpAdvancementRepairDone", {
+    name: "HP Advancement Repair Done",
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: false
+  });
+
+  // Combat Settings
+  game.settings.registerMenu("wuxia-system", "combatConfiguration", {
+    name: "SETTINGS.DND5E.COMBAT.Name",
+    label: "SETTINGS.DND5E.COMBAT.Label",
+    hint: "SETTINGS.DND5E.COMBAT.Hint",
+    icon: "fas fa-explosion",
+    type: CombatSettingsConfig,
+    restricted: true
+  });
+
+  game.settings.register("wuxia-system", "autoRecharge", {
+    name: "SETTINGS.DND5E.NPCS.AutoRecharge.Name",
+    hint: "SETTINGS.DND5E.NPCS.AutoRecharge.Hint",
+    scope: "world",
+    config: false,
+    default: "no",
+    type: String,
+    choices: {
+      no: "SETTINGS.DND5E.NPCS.AutoRecharge.No",
+      silent: "SETTINGS.DND5E.NPCS.AutoRecharge.Silent",
+      yes: "SETTINGS.DND5E.NPCS.AutoRecharge.Yes"
+    }
+  });
+
+  game.settings.register("wuxia-system", "autoRollNPCHP", {
+    name: "SETTINGS.DND5E.NPCS.AutoRollNPCHP.Name",
+    hint: "SETTINGS.DND5E.NPCS.AutoRollNPCHP.Hint",
+    scope: "world",
+    config: false,
+    default: "no",
+    type: String,
+    choices: {
+      no: "SETTINGS.DND5E.NPCS.AutoRollNPCHP.No",
+      silent: "SETTINGS.DND5E.NPCS.AutoRollNPCHP.Silent",
+      yes: "SETTINGS.DND5E.NPCS.AutoRollNPCHP.Yes"
+    }
+  });
+
+  game.settings.register("wuxia-system", "criticalDamageModifiers", {
+    name: "SETTINGS.DND5E.CRITICAL.MultiplyModifiers.Name",
+    hint: "SETTINGS.DND5E.CRITICAL.MultiplyModifiers.Hint",
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: false
+  });
+
+  game.settings.register("wuxia-system", "criticalDamageMaxDice", {
+    name: "SETTINGS.DND5E.CRITICAL.MaxDice.Name",
+    hint: "SETTINGS.DND5E.CRITICAL.MaxDice.Hint",
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: false
+  });
+
+  game.settings.register("wuxia-system", "initiativeDexTiebreaker", {
+    name: "SETTINGS.DND5E.COMBAT.DexTiebreaker.Name",
+    hint: "SETTINGS.DND5E.COMBAT.DexTiebreaker.Hint",
+    scope: "world",
+    config: false,
+    default: false,
+    type: Boolean
+  });
+
+  game.settings.register("wuxia-system", "initiativeScore", {
+    name: "SETTINGS.DND5E.COMBAT.InitiativeScore.Name",
+    hint: "SETTINGS.DND5E.COMBAT.InitiativeScore.Hint",
+    scope: "world",
+    config: false,
+    default: "none",
+    type: String,
+    choices: {
+      none: "SETTINGS.DND5E.COMBAT.InitiativeScore.None",
+      npcs: "SETTINGS.DND5E.COMBAT.InitiativeScore.NPCs",
+      all: "SETTINGS.DND5E.COMBAT.InitiativeScore.All"
+    }
+  });
+
+  // Variant Rules
+  game.settings.registerMenu("wuxia-system", "variantRulesConfiguration", {
+    name: "SETTINGS.DND5E.VARIANT.Name",
+    label: "SETTINGS.DND5E.VARIANT.Label",
+    hint: "SETTINGS.DND5E.VARIANT.Hint",
+    icon: "fas fa-list-check",
+    type: VariantRulesSettingsConfig,
+    restricted: true
+  });
+
+  game.settings.register("wuxia-system", "allowFeats", {
+    name: "SETTINGS.DND5E.VARIANT.AllowFeats.Name",
+    hint: "SETTINGS.DND5E.VARIANT.AllowFeats.Hint",
+    scope: "world",
+    config: false,
+    default: true,
+    type: Boolean
+  });
+
+  game.settings.register("wuxia-system", "currencyWeight", {
+    name: "SETTINGS.DND5E.VARIANT.CurrencyWeight.Name",
+    hint: "SETTINGS.DND5E.VARIANT.CurrencyWeight.Hint",
+    scope: "world",
+    config: false,
+    default: false,   // moedas NÃO contam peso por padrão neste sistema
+    type: Boolean
+  });
+
+  game.settings.register("wuxia-system", "encumbrance", {
+    name: "SETTINGS.DND5E.VARIANT.Encumbrance.Name",
+    hint: "SETTINGS.DND5E.VARIANT.Encumbrance.Hint",
+    scope: "world",
+    config: false,
+    default: "none",
+    type: String,
+    choices: {
+      none: "SETTINGS.DND5E.VARIANT.Encumbrance.None",
+      normal: "SETTINGS.DND5E.VARIANT.Encumbrance.Normal",
+      variant: "SETTINGS.DND5E.VARIANT.Encumbrance.Variant"
+    }
+  });
+
+  game.settings.register("wuxia-system", "honorScore", {
+    name: "SETTINGS.DND5E.VARIANT.HonorScore.Name",
+    hint: "SETTINGS.DND5E.VARIANT.HonorScore.Hint",
+    scope: "world",
+    config: false,
+    default: false,
+    type: Boolean,
+    requiresReload: true
+  });
+
+  game.settings.register("wuxia-system", "levelingMode", {
+    name: "SETTINGS.DND5E.VARIANT.LevelingMode.Name",
+    hint: "SETTINGS.DND5E.VARIANT.LevelingMode.Hint",
+    scope: "world",
+    config: false,
+    default: "xpBoons",
+    type: String,
+    choices: {
+      noxp: "SETTINGS.DND5E.VARIANT.LevelingMode.NoXP",
+      xp: "SETTINGS.DND5E.VARIANT.LevelingMode.XP",
+      xpBoons: "SETTINGS.DND5E.VARIANT.LevelingMode.XPBoons"
+    }
+  });
+
+  game.settings.register("wuxia-system", "proficiencyModifier", {
+    name: "SETTINGS.DND5E.VARIANT.ProficiencyModifier.Name",
+    hint: "SETTINGS.DND5E.VARIANT.ProficiencyModifier.Hint",
+    scope: "world",
+    config: false,
+    default: "bonus",
+    type: String,
+    choices: {
+      bonus: "SETTINGS.DND5E.VARIANT.ProficiencyModifier.Bonus",
+      dice: "SETTINGS.DND5E.VARIANT.ProficiencyModifier.Dice"
+    }
+  });
+
+  game.settings.register("wuxia-system", "restVariant", {
+    name: "SETTINGS.DND5E.VARIANT.Rest.Name",
+    hint: "SETTINGS.DND5E.VARIANT.Rest.Hint",
+    scope: "world",
+    config: false,
+    default: "normal",
+    type: String,
+    choices: {
+      normal: "SETTINGS.DND5E.VARIANT.Rest.Normal",
+      gritty: "SETTINGS.DND5E.VARIANT.Rest.Gritty",
+      epic: "SETTINGS.DND5E.VARIANT.Rest.Epic"
+    }
+  });
+
+  game.settings.register("wuxia-system", "sanityScore", {
+    name: "SETTINGS.DND5E.VARIANT.SanityScore.Name",
+    hint: "SETTINGS.DND5E.VARIANT.SanityScore.Hint",
+    scope: "world",
+    config: false,
+    default: false,
+    type: Boolean,
+    requiresReload: true
+  });
+
+  // Visibility Settings
+  game.settings.registerMenu("wuxia-system", "visibilityConfiguration", {
+    name: "SETTINGS.DND5E.VISIBILITY.Name",
+    label: "SETTINGS.DND5E.VISIBILITY.Label",
+    hint: "SETTINGS.DND5E.VISIBILITY.Hint",
+    icon: "fas fa-eye",
+    type: VisibilitySettingsConfig,
+    restricted: true
+  });
+
+  game.settings.register("wuxia-system", "attackRollVisibility", {
+    name: "SETTINGS.DND5E.VISIBILITY.Attack.Name",
+    hint: "SETTINGS.DND5E.VISIBILITY.Attack.Hint",
+    scope: "world",
+    config: false,
+    default: "none",
+    type: String,
+    choices: {
+      all: "SETTINGS.DND5E.VISIBILITY.Attack.All",
+      hideAC: "SETTINGS.DND5E.VISIBILITY.Attack.HideAC",
+      none: "SETTINGS.DND5E.VISIBILITY.Attack.None"
+    }
+  });
+
+  game.settings.register("wuxia-system", "bloodied", {
+    name: "SETTINGS.DND5E.BLOODIED.Name",
+    hint: "SETTINGS.DND5E.BLOODIED.Hint",
+    scope: "world",
+    config: false,
+    default: "player",
+    type: String,
+    choices: {
+      all: "SETTINGS.DND5E.BLOODIED.All",
+      player: "SETTINGS.DND5E.BLOODIED.Player",
+      none: "SETTINGS.DND5E.BLOODIED.None"
+    }
+  });
+
+  game.settings.register("wuxia-system", "challengeVisibility", {
+    name: "SETTINGS.DND5E.VISIBILITY.Challenge.Name",
+    hint: "SETTINGS.DND5E.VISIBILITY.Challenge.Hint",
+    scope: "world",
+    config: false,
+    default: "player",
+    type: String,
+    choices: {
+      all: "SETTINGS.DND5E.VISIBILITY.Challenge.All",
+      player: "SETTINGS.DND5E.VISIBILITY.Challenge.Player",
+      none: "SETTINGS.DND5E.VISIBILITY.Challenge.None"
+    }
+  });
+
+  game.settings.register("wuxia-system", "concealItemDescriptions", {
+    name: "SETTINGS.DND5E.VISIBILITY.ItemDescriptions.Name",
+    hint: "SETTINGS.DND5E.VISIBILITY.ItemDescriptions.Hint",
+    scope: "world",
+    config: false,
+    default: false,
+    type: Boolean
+  });
+
+  // Primary Group
+  game.settings.register("wuxia-system", "primaryParty", {
+    name: "Primary Party",
+    scope: "world",
+    config: false,
+    default: null,
+    type: PrimaryPartySetting,
+    onChange: s => { ui.actors.render(); dnd5e.ui.calendar?.render(); }
+  });
+
+  // Control hints
+  game.settings.register("wuxia-system", "controlHints", {
+    name: "DND5E.Controls.Name",
+    hint: "DND5E.Controls.Hint",
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
+  // NPC sheet default skills
+  game.settings.register("wuxia-system", "defaultSkills", {
+    name: "SETTINGS.DND5E.DEFAULTSKILLS.Name",
+    hint: "SETTINGS.DND5E.DEFAULTSKILLS.Hint",
+    type: new foundry.data.fields.SetField(
+      new foundry.data.fields.StringField({
+        choices: () => CONFIG.DND5E.skills
+      })
+    ),
+    default: [],
+    config: true
+  });
+
+  cacheSettings();
+}
+
+/* -------------------------------------------- */
+
+/**
+ * Cache various World settings to improve performance.
+ */
+function cacheSettings() {
+  dnd5e.settings = {};
+  for ( const setting of game.settings.settings.values() ) {
+    const { key, namespace, onChange, requiresReload, scope } = setting;
+    if ( (scope !== "world") || (namespace !== "wuxia-system") ) continue;
+    dnd5e.settings[key] = game.settings.get(namespace, key);
+    if ( !requiresReload ) setting.onChange = (value, ...args) => {
+      dnd5e.settings[key] = value;
+      onChange?.(value, ...args);
+    };
+  }
+}
+
+/* -------------------------------------------- */
+
+/**
+ * Register additional settings after modules have had a chance to initialize to give them a chance to modify choices.
+ */
+export function registerDeferredSettings() {
+  game.settings.register("wuxia-system", "theme", {
+    name: "SETTINGS.DND5E.THEME.Name",
+    hint: "SETTINGS.DND5E.THEME.Hint",
+    scope: "client",
+    config: false,
+    default: "",
+    type: String,
+    choices: {
+      "": "SHEETS.DND5E.THEME.Automatic",
+      ...CONFIG.DND5E.themes
+    },
+    onChange: s => setTheme(document.body, s)
+  });
+
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    setTheme(document.body, game.settings.get("wuxia-system", "theme"));
+  });
+  matchMedia("(prefers-contrast: more)").addEventListener("change", () => {
+    setTheme(document.body, game.settings.get("wuxia-system", "theme"));
+  });
+
+  // Hook into core color scheme setting.
+  const setting = game.settings.get("core", "uiConfig");
+  const settingConfig = game.settings.settings.get("core.uiConfig");
+  const { onChange } = settingConfig ?? {};
+  if ( onChange ) settingConfig.onChange = (s, ...args) => {
+    onChange(s, ...args);
+    setTheme(document.body, s.colorScheme);
+  };
+  setTheme(document.body, setting.colorScheme);
+}
+
+/* -------------------------------------------- */
+
+/**
+ * Update configuration data when legacy rules are set.
+ */
+export function applyLegacyRules() {
+  const DND5E = CONFIG.DND5E;
+
+  // Set half-casters to round down.
+  DND5E.spellcasting.spell.progression.half.roundUp = false;
+
+  // Adjust Wild Shape and Polymorph presets.
+  for ( const preset of ["polymorph", "wildshape"] ) {
+    DND5E.transformation.presets[preset].settings.keep.delete("hp");
+    DND5E.transformation.presets[preset].settings.keep.delete("languages");
+    DND5E.transformation.presets[preset].settings.keep.delete("type");
+    delete DND5E.transformation.presets[preset].settings.tempFormula;
+  }
+
+  // Adjust language categories.
+  delete DND5E.languages.standard.children.sign;
+  DND5E.languages.exotic.children.draconic = DND5E.languages.standard.children.draconic;
+  delete DND5E.languages.standard.children.draconic;
+  DND5E.languages.cant = DND5E.languages.exotic.children.cant;
+  delete DND5E.languages.exotic.children.cant;
+  DND5E.languages.druidic = DND5E.languages.exotic.children.druidic;
+  delete DND5E.languages.exotic.children.druidic;
+
+  // Stunned stops movement in legacy & surprised doesn't provide initiative disadvantage.
+  DND5E.conditionEffects.noMovement.add("stunned");
+  DND5E.conditionEffects.initiativeAdvantage.delete("invisible");
+  DND5E.conditionEffects.initiativeDisadvantage.delete("incapacitated");
+  DND5E.conditionEffects.initiativeDisadvantage.delete("surprised");
+
+  // Incapacitated creatures within 2 size categories still cannot be moved through in legacy
+  delete DND5E.conditionTypes.incapacitated.neverBlockMovement;
+
+  // Adjust references.
+  Object.assign(DND5E.rules, LEGACY.RULES);
+  for ( const [cat, value] of Object.entries(LEGACY.REFERENCES) ) {
+    Object.entries(value).forEach(([k, v]) => DND5E[cat][k].reference = v);
+  }
+
+  // Adjust base item IDs.
+  for ( const [cat, value] of Object.entries(LEGACY.IDS) ) {
+    if ( cat === "focusTypes" ) Object.entries(value).forEach(([k, v]) => DND5E[cat][k].itemIds = v);
+    else if ( cat === "tools" ) Object.entries(value).forEach(([k, v]) => DND5E[cat][k].id = v);
+    else DND5E[cat] = value;
+  }
+
+  // Swap spell lists.
+  DND5E.SPELL_LISTS = LEGACY.SPELL_LISTS;
+}
+
+/* -------------------------------------------- */
+
+/**
+ * Set the theme on an element, removing the previous theme class in the process.
+ * @param {HTMLElement} element     Body or sheet element on which to set the theme data.
+ * @param {string} [theme=""]       Theme key to set.
+ * @param {Set<string>} [flags=[]]  Additional theming flags to set.
+ */
+export function setTheme(element, theme="", flags=new Set()) {
+  if ( foundry.utils.getType(theme) === "Object" ) theme = theme.applications;
+  element.className = element.className.replace(/\bdnd5e-(theme|flag)-[\w-]+\b/g, "");
+
+  // Primary Theme
+  if ( !theme && (element === document.body) ) {
+    if ( matchMedia("(prefers-color-scheme: dark)").matches ) theme = "dark";
+    if ( matchMedia("(prefers-color-scheme: light)").matches ) theme = "light";
+  }
+  if ( theme ) {
+    element.classList.add(`dnd5e-theme-${theme.slugify()}`);
+    element.dataset.theme = theme;
+  }
+  else delete element.dataset.theme;
+
+  // Additional Flags
+  if ( (element === document.body) && matchMedia("(prefers-contrast: more)").matches ) flags.add("high-contrast");
+  for ( const flag of flags ) element.classList.add(`dnd5e-flag-${flag.slugify()}`);
+  element.dataset.themeFlags = Array.from(flags).join(" ");
+}

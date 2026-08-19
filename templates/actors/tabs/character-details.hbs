@@ -1,0 +1,260 @@
+<section class="tab {{ tab.cssClass }} jj-details-tab" data-tab="{{ tab.id }}" data-group="{{ tab.group }}">
+
+    {{!-- Topo: Salvaguardas (ocupa as 2 linhas) | Categoria/Caminho | Espécie/Origem --}}
+    <div class="jj-details-top{{#unless detailsHasMiddleColumn}} no-middle{{/unless}}">
+
+        {{!-- Salvaguardas --}}
+        <div class="saves jj-area-saves jj-nen-panel" data-kanji="守">
+            <h3>
+                <i class="fas fa-shield-heart" inert></i>
+                <span class="roboto-upper">{{ localize "DND5E.ClassSaves" }}</span>
+            </h3>
+            <ul>
+                {{#each saves}}
+                {{> ".ability-prof" path=(concat "system.abilities." @key)
+                    config=(localize "DND5E.AbilityConfigure" ability=label) }}
+                {{/each}}
+            </ul>
+        </div>
+
+        {{!-- Categoria (classe) — level up pelo select .level-selector (listener da ficha toda) --}}
+        <div class="pills-lg classes jj-area-categoria">
+            {{#each classes as |cls|}}
+            {{#if (eq cls.type "class")}}
+            {{#dnd5e-itemContext cls as |ctx|}}
+            <div class="class pill-lg texture" data-item-id="{{ cls.id }}" style="--underlay: url('{{ ctx.prefixedImage }}');">
+                <img class="draggable gold-icon item-tooltip" src="{{ cls.img }}" alt="{{ cls.name }}"
+                     data-action="showDocument" data-uuid="{{ cls.uuid }}" data-item-id="{{ cls.id }}">
+                <div class="name name-stacked">
+                    <span class="title">{{ cls.name }}</span>
+                    <span class="subtitle">Categoria</span>
+                </div>
+                <div class="level">
+                    {{#if @root.editable}}
+                    <select class="level-selector">
+                        {{ selectOptions ctx.availableLevels selected=0 }}
+                    </select>
+                    {{else}}
+                    <span>{{ cls.system.levels }}</span>
+                    {{/if}}
+                </div>
+                {{#if @root.editable}}
+                <button type="button" class="deletion-control unbutton" data-action="deleteDocument"
+                        data-item-id="{{ cls.id }}" data-uuid="{{ cls.uuid }}"
+                        data-tooltip="DND5E.ItemDelete" aria-label="{{ localize 'DND5E.ItemDelete' }}"
+                        data-tooltip-class data-tooltip-direction>
+                    <i class="fas fa-trash" inert></i>
+                </button>
+                {{/if}}
+            </div>
+            {{/dnd5e-itemContext}}
+            {{/if}}
+            {{/each}}
+        </div>
+
+        {{!-- Espécie --}}
+        <div class="pills-lg jj-area-especie">
+            {{#if species}}
+            <div class="draggable pill-lg item-tooltip" data-action="showDocument"
+                 data-item-id="{{ species.id }}" data-uuid="{{ species.uuid }}"
+                 aria-label="{{ localize (ifThen actor.isOwner 'DND5E.ItemEdit' 'DND5E.ItemView') }}">
+                {{#if species.img}}
+                <img class="gold-icon" src="{{ species.img }}" alt="{{ species.name }}">
+                {{/if}}
+                <div class="name name-stacked">
+                    <span class="title">{{ species.name }}</span>
+                    {{#if editable}}
+                    <select class="actor-size unselect" name="system.traits.size">
+                        {{ selectOptions CONFIG.actorSizes selected=source.traits.size labelAttr="label" }}
+                    </select>
+                    {{else}}
+                    <span class="subtitle">{{ labels.size }}</span>
+                    {{/if}}
+                </div>
+                {{#if editable}}
+                <button type="button" class="config-button unbutton" data-action="deleteDocument"
+                        data-tooltip="DND5E.ItemDelete" aria-label="{{ localize 'DND5E.ItemDelete' }}"
+                        data-tooltip-class data-tooltip-direction>
+                    <i class="fas fa-trash" inert></i>
+                </button>
+                {{/if}}
+            </div>
+            {{else if actor.isOwner}}
+            <div class="pill-lg empty roboto-upper" data-action="findItem" data-item-type="race">
+                {{ localize "DND5E.Species.Add" }}
+            </div>
+            {{/if}}
+        </div>
+
+        {{!-- Caminho (subclasse) --}}
+        <div class="pills-lg classes jj-area-caminho">
+            {{#each classes as |cls|}}
+            {{#if (eq cls.type "class")}}
+            {{#dnd5e-itemContext cls as |ctx|}}
+            {{#if cls.subclass}}
+            <div class="draggable pill-lg item-tooltip" data-action="showDocument"
+                 data-item-id="{{ cls.subclass.id }}" data-uuid="{{ cls.subclass.uuid }}"
+                 aria-label="{{ localize (ifThen @root.actor.isOwner 'DND5E.ItemEdit' 'DND5E.ItemView') }}">
+                {{#if cls.subclass.img}}
+                <img class="gold-icon" src="{{ cls.subclass.img }}" alt="{{ cls.subclass.name }}">
+                {{/if}}
+                <div class="name name-stacked">
+                    <span class="title">{{ cls.subclass.name }}</span>
+                    <span class="subtitle">Caminho</span>
+                </div>
+                {{#if @root.editable}}
+                <button type="button" class="deletion-control unbutton" data-action="deleteDocument"
+                        data-item-id="{{ cls.subclass.id }}" data-uuid="{{ cls.subclass.uuid }}"
+                        data-tooltip="DND5E.ItemDelete" aria-label="{{ localize 'DND5E.ItemDelete' }}"
+                        data-tooltip-class data-tooltip-direction>
+                    <i class="fas fa-trash" inert></i>
+                </button>
+                {{/if}}
+            </div>
+            {{else if ctx.needsSubclass}}
+            <div class="pill-lg empty roboto-upper" data-action="findItem" data-item-type="subclass"
+                 data-class-identifier="{{ cls.identifier }}">
+                {{ localize "DND5E.SubclassAdd" }}
+            </div>
+            {{/if}}
+            {{/dnd5e-itemContext}}
+            {{/if}}
+            {{/each}}
+        </div>
+
+        {{!-- Origem (antecedente) --}}
+        <div class="pills-lg jj-area-origem">
+            {{#if background}}
+            <div class="draggable pill-lg item-tooltip" data-action="showDocument"
+                 data-item-id="{{ background.id }}" data-uuid="{{ background.uuid }}"
+                 aria-label="{{ localize (ifThen actor.isOwner DND5E.ItemEdit DND5E.ItemView) }}">
+                {{#if background.img}}
+                <img class="gold-icon" src="{{ background.img }}" alt="{{ background.name }}">
+                {{/if}}
+                <div class="name name-stacked">
+                    <span class="title">{{ background.name }}</span>
+                </div>
+                {{#if editable}}
+                <button type="button" class="config-button unbutton" data-action="deleteDocument"
+                        data-tooltip="DND5E.ItemDelete" aria-label="{{ localize 'DND5E.ItemDelete' }}"
+                        data-tooltip-class data-tooltip-direction>
+                    <i class="fas fa-trash" inert></i>
+                </button>
+                {{/if}}
+            </div>
+            {{else if actor.isOwner}}
+            <div class="pill-lg empty roboto-upper" data-action="findItem" data-item-type="background">
+                {{ localize "DND5E.BackgroundAdd" }}
+            </div>
+            {{/if}}
+        </div>
+
+    </div>
+
+    {{!-- Perícias — full-width abaixo do topo; 2 colunas via CSS multicol
+         (o <ul> precisa ser filho direto do painel pro estilo de item do dnd5e valer) --}}
+    <div class="skills jj-skills-top jj-nen-panel" data-kanji="技">
+        <h3>
+            <i class="fas fa-briefcase" inert></i>
+            <span class="roboto-upper">{{ localize "DND5E.Skills" }}</span>
+        </h3>
+        <ul>
+            {{#each skills}}
+            {{#if this.isSeparator}}
+            <li class="skill-separator sep-{{ this.sepKey }}{{#if this.colBreak}} col-break{{/if}}">{{ this.label }}</li>
+            {{else}}
+            {{> ".skill-prof" path=(concat "system.skills." key) config="DND5E.SkillConfigure"
+                type="skill" hasPassive=true roll="skill-name" }}
+            {{/if}}
+            {{/each}}
+        </ul>
+    </div>
+
+    {{!-- ═══════════════ RESISTÊNCIAS & VULNERABILIDADES (PF2e) ═══════════════
+         Um bloco único, 3 colunas. Cada tipo de dano numa linha com o nome em
+         cima, uma linha horizontal e um hexágono central com o valor líquido:
+         > 0 (verde, à direita) = Resistência
+         < 0 (vermelho, à esquerda) = Vulnerabilidade
+         = 0 → hexágono 0, sem barra. --}}
+    <div class="jj-resist jj-nen-panel" data-kanji="耐">
+        <h3>
+            <i class="fas fa-shield-halved" inert></i>
+            <span class="roboto-upper">{{ localize "WUXIA.Resistances.Title" }}</span>
+            {{#if editable}}
+            <span class="jj-resist-cogs">
+                <button type="button" class="config-button unbutton jj-resist-cog" data-action="showConfiguration"
+                        data-config="resistance"
+                        data-tooltip="Configurar Resistências e Vulnerabilidades"
+                        aria-label="Configurar Resistências e Vulnerabilidades">
+                    <i class="fas fa-cog" inert></i>
+                </button>
+            </span>
+            {{/if}}
+        </h3>
+        <div class="jj-resist-body">
+            {{#each pf2eTraits.columns as |col|}}
+            <ul class="jj-resist-col">
+                {{#each col}}
+                <li class="jj-resist-row {{ kind }}" data-type="{{ type }}"
+                    data-tooltip="{{ label }}: {{#if (gt value 0)}}{{ localize 'WUXIA.Resistance.Prefix' }} {{ value }}{{else if (lt value 0)}}{{ localize 'WUXIA.Weakness.Prefix' }} {{ absValue }}{{else}}{{ localize 'WUXIA.Resistances.Neutral' }}{{/if}}">
+                    <span class="jj-resist-name">{{ label }}</span>
+                    <span class="jj-resist-bar">
+                        <span class="jj-resist-fill {{ kind }}" style="width: {{ pct }}%;"></span>
+                        <span class="jj-resist-hex">{{ value }}</span>
+                    </span>
+                </li>
+                {{/each}}
+            </ul>
+            {{/each}}
+        </div>
+    </div>
+</section>
+
+{{#*inline ".skill-prof"}}
+<li data-key="{{ key }}" {{~#if reference}} data-reference-tooltip="{{ reference }}"{{/if}}>
+    <proficiency-cycle type="skill" name="{{ path }}.value" data-tooltip="{{ hover }}"
+                       value="{{#if @root.editable}}{{ source.value }}{{else}}{{ prof.multiplier }}{{/if}}"
+                       aria-label="{{ localize hover }}" {{disabled (not @root.editable)}}></proficiency-cycle>
+    {{#if @root.editable}}
+    <select name="{{ path }}.ability" class="ability roboto-upper unselect">
+        {{ selectOptions @root.CONFIG.abilities selected=baseAbility labelAttr="abbreviation" }}
+    </select>
+    {{else}}
+    <div class="ability roboto-upper">{{ abbreviation }}</div>
+    {{/if}}
+    <a class="draggable name {{ @root.rollableClass }} {{ roll }}" data-action="roll" data-type="{{ type }}">
+        {{ label }}
+    </a>
+    <div class="bonus">{{ dnd5e-formatModifier total }}</div>
+    {{#if @root.editable}}
+    <button type="button" class="config-button unbutton" data-action="showConfiguration" data-config="{{ type }}"
+            data-tooltip="{{ config }}" aria-label="{{ localize config }}">
+        <i class="fas fa-cog" inert></i>
+    </button>
+    {{else if hasPassive}}
+    <div class="passive">{{ passive }}</div>
+    {{/if}}
+</li>
+{{/inline}}
+
+{{#*inline ".ability-prof"}}
+<li data-ability="{{ @key }}" class="{{ class }}">
+    {{#if isConcentration}}
+    <dnd5e-icon src="systems/wuxia-system/icons/svg/statuses/concentrating.svg"></dnd5e-icon>
+    {{else}}
+    <proficiency-cycle type="ability" name="{{ path }}.proficient" data-tooltip aria-label="{{ hover }}"
+                       value="{{#if @root.editable}}{{ source.proficient }}{{else}}{{ proficient }}{{/if}}"
+                       {{ disabled (not @root.editable) }}></proficiency-cycle>
+    {{/if}}
+    <a class="name saving-throw full {{ @root.rollableClass }}" data-action="roll" data-type="ability">{{ label }}</a>
+    <a class="name saving-throw abbr {{ @root.rollableClass }}" data-action="roll" data-type="ability">{{ abbr }}</a>
+    <div class="bonus">{{ dnd5e-formatModifier save.value }}</div>
+    {{#if @root.editable}}
+    <button type="button" class="config-button unbutton" data-action="showConfiguration" data-config="ability"
+            data-tooltip aria-label="{{ config }}">
+        <i class="fas fa-cog" inert></i>
+    </button>
+    {{/if}}
+</li>
+{{/inline}}
+

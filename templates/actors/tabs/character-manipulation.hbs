@@ -1,0 +1,132 @@
+<section class="tab {{ tab.cssClass }} jujutsu-section" data-tab="{{ tab.id }}" data-group="{{ tab.group }}">
+
+  {{!-- ═══════════════════════════ HEADER ═══════════════════════════ --}}
+  <div class="manipulation-header jujutsu-card">
+
+    <div class="manipulation-stage">
+      <span class="stage-label">Cultivo</span>
+      <span class="stage-value stage-master">{{ cultivationStage.rankName }}</span>
+      <span class="stage-pts">· Rank {{ cultivationStage.rank }} · Estágio {{ cultivationStage.stage }}/3</span>
+    </div>
+
+    <div class="manipulation-resources">
+      <div class="resource-box">
+        <label>Pontos de Qi</label>
+        <input type="number"
+          name="system.curseResources.cursePoints"
+          value="{{actor.system.curseResources.cursePoints}}"
+          min="0" data-dtype="Number" />
+      </div>
+    </div>
+
+  </div>
+
+  {{!-- ══════════════════════════ EFEITO ════════════════════════════ --}}
+  <div class="stage-effects">
+    <p class="stage-effect-text">
+      ✦ <strong>{{ cultivationStage.rankName }}</strong> — Rank {{ cultivationStage.rank }} · Estágio {{ cultivationStage.stage }}/3
+    </p>
+  </div>
+
+  {{!-- ═══════════════════ EVOLUÇÃO NA PRÁTICA ═════════════════════ --}}
+  <div class="evolution-section jujutsu-card">
+
+    <div class="evolution-header">
+      <div class="evolution-title-row">
+        <span class="evolution-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="12,2 21,7 21,17 12,22 3,17 3,7" fill="none" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </span>
+        <h3 class="evolution-title">Evolução na Prática</h3>
+        <span class="evolution-subtitle">Treinamento Intenso — 10 dias</span>
+      </div>
+      <button type="button" class="btn-intensive-training"
+        data-action="intensiveTraining"
+        title="Iniciar Evolução na Prática (10 dias)">
+        <i class="fas fa-dumbbell"></i> Treinar
+      </button>
+    </div>
+
+    <div class="evolution-counters">
+
+      {{!-- PQ Máximo --}}
+      <div class="evo-counter-card evo-counter-max {{#if actor.system.energy.intensiveTraining.maxEnergy}}has-training{{/if}}">
+        <div class="evo-counter-icon">
+          <i class="fas fa-arrow-up"></i>
+        </div>
+        <span class="evo-counter-label">PQ Máximo</span>
+        <span class="evo-counter-desc">+5 por treino</span>
+        <div class="evo-counter-badge">
+          <span class="evo-counter-value">+{{actor.system.energy.intensiveTraining.maxEnergy}}</span>
+        </div>
+        {{#if actor.system.energy.intensiveTraining.maxEnergy}}
+        <button type="button" class="evo-undo-btn" data-action="undoIntensiveTraining" data-field="maxEnergy"
+          title="Desfazer último treino de PQ Máximo">
+          <i class="fas fa-rotate-left"></i>
+        </button>
+        {{/if}}
+      </div>
+
+      {{!-- Pontos de Cultivo --}}
+      <div class="evo-counter-card evo-counter-nen {{#if actor.system.energy.intensiveTraining.cursePoints}}has-training{{/if}}">
+        <div class="evo-counter-icon">
+          <i class="fas fa-hand-fist"></i>
+        </div>
+        <span class="evo-counter-label">Pontos de Cultivo</span>
+        <span class="evo-counter-desc">+4 por treino</span>
+        <div class="evo-counter-badge">
+          <span class="evo-counter-value">+{{actor.system.energy.intensiveTraining.cursePoints}}</span>
+        </div>
+        {{#if actor.system.energy.intensiveTraining.cursePoints}}
+        <button type="button" class="evo-undo-btn" data-action="undoIntensiveTraining" data-field="cursePoints"
+          title="Desfazer último treino de PC">
+          <i class="fas fa-rotate-left"></i>
+        </button>
+        {{/if}}
+      </div>
+
+    </div>
+
+    <p class="evolution-note">
+      💡 Gaste <strong>10 dias de treinamento</strong> para obter uma melhoria.
+    </p>
+
+  </div>
+
+  {{!-- ═══════════════════════ HABILIDADES MORTAIS E IMORTAIS ═══════════════════════ --}}
+  {{#each mortalGroups as |grupo|}}
+  <div class="mortal-rank-section {{#if (eq grupo.tier "imortal")}}imortal-tier{{/if}}">
+    <h3 class="mortal-rank-title">
+      {{#if (eq grupo.tier "imortal")}}⭐ Habilidades Imortais{{else}}✦ Habilidades Mortais{{/if}}
+      — {{ grupo.rankName }} (Rank {{ grupo.rank }})
+    </h3>
+    <div class="mortal-ability-grid">
+      {{#each grupo.abilities as |ab|}}
+      <div class="mortal-ability-card state-{{ ab.state }}"
+           data-tooltip="{{ ab.description }}">
+        <div class="mortal-ability-head">
+          {{#if (eq ab.state "unlocked")}}
+          <i class="fas fa-check mortal-ability-check" inert></i>
+          {{else if (eq ab.state "locked")}}
+          <i class="fas fa-lock mortal-ability-lock" inert></i>
+          {{/if}}
+          <span class="mortal-ability-name">{{ ab.name }}</span>
+        </div>
+        <p class="mortal-ability-desc">{{ ab.description }}</p>
+        {{#if ab.canUnlock}}
+        <button type="button" class="mortal-ability-btn" data-action="unlockMortalAbility" data-id="{{ ab.id }}">
+          <i class="fas fa-plus" inert></i> Aprender
+          {{#if ab.cost.pc}}({{ab.cost.pc}} PC){{/if}}
+        </button>
+        {{/if}}
+        {{#if ab.prereq}}
+        <span class="mortal-ability-req">Requer: Sentido Divino</span>
+        {{/if}}
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/each}}
+
+</section>

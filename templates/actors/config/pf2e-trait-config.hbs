@@ -1,0 +1,39 @@
+<div class="pf2e-trait-config dnd5e2">
+    <div class="pf2e-trait-columns">
+        {{!-- Coluna: Resistências --}}
+        <fieldset class="pf2e-trait-col">
+            <legend class="roboto-condensed-upper">Resistências</legend>
+            {{#if resHint}}<p class="hint">{{ resHint }}</p>{{/if}}
+            <ul class="pf2e-trait-list">
+                {{#each resistanceChoices}}
+                <li class="pf2e-trait-row" data-type="{{ key }}">
+                    {{#if icon}}<img class="damage-icon" src="{{ icon }}" alt="">{{/if}}
+                    <label class="damage-label">{{ label }}</label>
+                    <input type="number" class="pf2e-trait-value"
+                           name="system.traits.resistance.{{ key }}"
+                           value="{{ value }}" placeholder="0" min="0" step="1"
+                           data-dtype="Number">
+                </li>
+                {{/each}}
+            </ul>
+        </fieldset>
+
+        {{!-- Coluna: Vulnerabilidades --}}
+        <fieldset class="pf2e-trait-col">
+            <legend class="roboto-condensed-upper">Vulnerabilidades</legend>
+            {{#if weakHint}}<p class="hint">{{ weakHint }}</p>{{/if}}
+            <ul class="pf2e-trait-list">
+                {{#each weaknessChoices}}
+                <li class="pf2e-trait-row" data-type="{{ key }}">
+                    {{#if icon}}<img class="damage-icon" src="{{ icon }}" alt="">{{/if}}
+                    <label class="damage-label">{{ label }}</label>
+                    <input type="number" class="pf2e-trait-value"
+                           name="system.traits.weakness.{{ key }}"
+                           value="{{ value }}" placeholder="0" min="0" step="1"
+                           data-dtype="Number">
+                </li>
+                {{/each}}
+            </ul>
+        </fieldset>
+    </div>
+</div>

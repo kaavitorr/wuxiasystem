@@ -1,0 +1,106 @@
+<section class="tab {{ tab.cssClass }}" data-tab="{{ tab.id }}" data-group="{{ tab.group }}">
+
+    {{!-- Characteristics --}}
+    <div class="top">
+        <ul class="unlist characteristics">
+            {{#each characteristics}}
+            <li>
+                <label>
+                    <span class="roboto-upper label">{{ localize label }}</span>
+                    {{#if @root.editable}}
+                    <input type="text" name="{{ name }}" value="{{ source }}">
+                    {{else}}
+                    <span class="value">{{ value }}</span>
+                    {{/if}}
+                </label>
+            </li>
+            {{/each}}
+        </ul>
+    </div>
+
+    {{!-- Caminho (Objetivo × Meio) — mesmo framework do OPRPG --}}
+    <div class="op-pers-sep"><span><i class="fas fa-compass" inert></i> Caminho</span></div>
+    <div class="op-caminho">
+        <div class="op-caminho-selects">
+            <label class="op-pers-field"><span>Objetivo</span>
+                <select name="flags.wuxia-system.caminho.objetivo">
+                    <option value="">— Escolher —</option>
+                    {{#each personalizacao.objetivos as |o|}}<option value="{{ o.id }}" {{#if o.selected}}selected{{/if}}>{{ o.label }}</option>{{/each}}
+                </select>
+            </label>
+            <span class="op-caminho-x">×</span>
+            <label class="op-pers-field"><span>Meio</span>
+                <select name="flags.wuxia-system.caminho.meio">
+                    <option value="">— Escolher —</option>
+                    {{#each personalizacao.meios as |m|}}<option value="{{ m.id }}" {{#if m.selected}}selected{{/if}}>{{ m.label }}</option>{{/each}}
+                </select>
+            </label>
+        </div>
+        {{#if personalizacao.caminho}}
+        <div class="op-caminho-result">
+            <div class="op-caminho-name"><span class="op-caminho-code">{{ personalizacao.caminho.code }}</span> {{ personalizacao.caminho.nome }}</div>
+            <p class="op-caminho-desc">{{ personalizacao.caminho.desc }}</p>
+        </div>
+        {{else}}
+        <p class="op-caminho-hint">Selecione um <strong>Objetivo</strong> e um <strong>Meio</strong> para definir o Caminho do personagem.</p>
+        {{/if}}
+    </div>
+
+    {{!-- Talentos & Defeitos (seletor do compêndio) --}}
+    <div class="op-pers-sep"><span><i class="fas fa-star" inert></i> Talentos &amp; Defeitos</span></div>
+    <div class="op-sing-columns">
+        <div class="op-sing-col">
+            <div class="op-sing-coltitle sing"><i class="fas fa-star" inert></i> Talentos</div>
+            <select class="op-sing-select hc-bio-select" data-kind="talento">
+                <option value="">+ Adicionar talento…</option>
+                {{#each bioChoices.talentos.avail as |t|}}<option value="{{ t.uuid }}">{{ t.name }}</option>{{/each}}
+            </select>
+            <div class="op-sing-selected">
+                {{#each bioChoices.talentos.selected as |t|}}
+                <button type="button" class="op-sing-card sing selected" data-action="removeBioItem" data-item-id="{{ t.id }}" data-tooltip="Remover">
+                    <span class="op-sing-name">{{ t.name }}</span>
+                    <i class="fas fa-xmark op-sing-rm" inert></i>
+                </button>
+                {{else}}
+                <span class="op-sing-empty">Nenhum talento.</span>
+                {{/each}}
+            </div>
+        </div>
+        <div class="op-sing-col">
+            <div class="op-sing-coltitle def"><i class="fas fa-skull" inert></i> Defeitos</div>
+            <select class="op-sing-select hc-bio-select" data-kind="defeito">
+                <option value="">+ Adicionar defeito…</option>
+                {{#each bioChoices.defeitos.avail as |d|}}<option value="{{ d.uuid }}">{{ d.name }}</option>{{/each}}
+            </select>
+            <div class="op-sing-selected">
+                {{#each bioChoices.defeitos.selected as |d|}}
+                <button type="button" class="op-sing-card def selected" data-action="removeBioItem" data-item-id="{{ d.id }}" data-tooltip="Remover">
+                    <span class="op-sing-name">{{ d.name }}</span>
+                    {{#if d.pts}}<small class="op-sing-esp">{{ d.pts }}pt</small>{{/if}}
+                    <i class="fas fa-xmark op-sing-rm" inert></i>
+                </button>
+                {{else}}
+                <span class="op-sing-empty">Nenhum defeito.</span>
+                {{/each}}
+            </div>
+        </div>
+    </div>
+
+    {{!-- Biography --}}
+    <div class="bottom" data-target="system.details.biography.value">
+        <h3 class="icon">
+            <i class="fas fa-feather"></i>
+            <dnd5e-icon src="systems/wuxia-system/icons/svg/ink-pot.svg"></dnd5e-icon>
+            <span class="roboto-upper">{{ localize "DND5E.Biography" }}</span>
+        </h3>
+        {{#if editable}}
+        <prose-mirror name="system.details.biography.value" value="{{ source.details.biography.value }}"
+                      document-uuid="{{ actor.uuid }}"></prose-mirror>
+        {{else}}
+        <div class="editor">
+            <div class="editor-content">{{{ enriched.value }}}</div>
+        </div>
+        {{/if}}
+    </div>
+
+</section>

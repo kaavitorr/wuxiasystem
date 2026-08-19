@@ -1,0 +1,448 @@
+/* ══════════════════════════════════════════════════════
+   HUNTER BASE — Variáveis, Sheet Core, Cards, Skills
+   Sistema Hunter x Hunter — Foundry VTT
+   ══════════════════════════════════════════════════════ */
+
+/* ════════════════════════════════════════
+   ROOT — VARIÁVEIS PRINCIPAIS
+   (Wuxia Legacy — Jade & Cobre, templo antigo)
+   ════════════════════════════════════════ */
+:root {
+  /* BASE */
+  --jj-black:         #0a0e0d;
+  --jj-bg-main:       #0a0e0d;
+  --jj-bg-soft:       #121815;
+  --jj-bg-card:       #161e1a;
+
+  /* BORDAS */
+  --jj-border:        #1e3028;
+  --jj-border-soft:   #162520;
+
+  /* TEXTO */
+  --jj-text-main:     #c8d8c8;
+  --jj-text-soft:     #8aa898;
+  --jj-text-fade:     #4a6a58;
+  --jj-text-dim:      #5a6a5e;
+
+  /* IDENTIDADE (Wuxia — Jade/Cobre) */
+  --jj-primary:       #2d8a5f;
+  --jj-primary-soft:  #b89868;
+  --jj-accent:        #b87333;
+  --jj-accent-soft:   #d49a5a;
+  --jj-accent-red:    #c84b4b;
+
+  /* VARIÁVEIS Wuxia */
+  --hxh-gold:         #b87333;
+  --hxh-gold-bright:  #d49a5a;
+  --hxh-gold-dim:     #7a4a20;
+  --hxh-blue:         #2d8a5f;
+  --hxh-blue-bright:  #3da870;
+  --hxh-blue-dim:     #1a5040;
+  --hxh-blue-glow:    rgba(45,138,95,.35);
+  --hxh-bg:           #0a0e0d;
+  --hxh-bg2:          #0e1410;
+  --hxh-bg3:          #121815;
+  --hxh-border:       rgba(45,138,95,.3);
+  --hxh-text:         #c8d8c8;
+  --hxh-text-dim:     #5a6a5e;
+}
+
+/* ════════════════════════════════════════
+   DND SHEET CORE
+   ════════════════════════════════════════ */
+.dnd5e2.sheet.actor.character {
+  --dnd5e-background-card: #0e1410;
+  --dnd5e-border-gold:     1px solid #1e3028;
+  --dnd5e-card-header-1:   #1a2420;
+  --dnd5e-card-header-2:   #141a16;
+  --dnd5e-color-gold:      #b89868;
+
+  --color-text-primary:    var(--jj-text-main);
+  --color-text-secondary:  var(--jj-text-soft);
+  --color-text-tertiary:   var(--jj-text-fade);
+}
+
+.dnd5e2.sheet.actor.character .window-content,
+.dnd5e2.sheet.actor.character .sheet-body {
+  background:
+    radial-gradient(circle at 20% 10%, rgba(45,138,95,0.10), transparent 50%),
+    radial-gradient(circle at 80% 90%, rgba(184,115,51,0.08), transparent 50%),
+    linear-gradient(180deg, #0a0e0d 0%, #0e1410 100%);
+  color: var(--jj-text-main) !important;
+}
+
+.dnd5e2.sheet.actor.character .sheet-sidebar {
+  background: rgba(12,18,14,0.8) !important;
+  border-right: 1px solid rgba(45,138,95,0.15);
+}
+
+/* ════════════════════════════════════════
+   CARDS BASE
+   ════════════════════════════════════════ */
+.dnd5e2.sheet.actor.character .card,
+.dnd5e2.sheet.actor.character fieldset.card {
+  background: var(--jj-bg-card);
+  border: 1px solid var(--jj-border);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.25);
+}
+
+.card .header {
+  background: linear-gradient(90deg, #1a2420, #141a16);
+  border-bottom: 1px solid var(--jj-border);
+}
+
+.card .header h3,
+.card .header h4 {
+  color: var(--jj-primary-soft);
+}
+
+.card li:hover,
+.card .item:hover {
+  background: rgba(45,138,95,0.06);
+}
+
+/* ════════════════════════════════════════
+   TABS BASE  (escopado às fichas; senão vaza pra sidebar do Foundry)
+   ════════════════════════════════════════ */
+.sheet .tab[data-tab] {
+  background: transparent;
+}
+
+.sheet .tab[data-tab] .items-section > header,
+.sheet .tab[data-tab] .items-section > .items-header {
+  background: linear-gradient(90deg, #1a2420, #141a16);
+  border-bottom: 1px solid var(--jj-border);
+}
+
+.sheet .tab[data-tab] .items-section > header *,
+.sheet .tab[data-tab] .items-section > .items-header * {
+  color: var(--jj-primary-soft);
+}
+
+.sheet .tab[data-tab] .items-section {
+  background: rgba(10,10,20,0.6);
+  border-color: var(--jj-border-soft);
+}
+
+/* Tabs específicas */
+.sheet .tab[data-tab="effects"],
+.sheet .tab[data-tab="features"],
+.sheet .tab[data-tab="spells"] {
+  background: transparent;
+}
+
+.sheet .tab[data-tab="effects"] .items-section,
+.sheet .tab[data-tab="features"] .items-section,
+.sheet .tab[data-tab="spells"] .items-section {
+  background: rgba(10,10,20,0.6);
+  border-color: var(--jj-border-soft);
+}
+
+.sheet .tab[data-tab="effects"] .items-section > header,
+.sheet .tab[data-tab="features"] .items-section > header,
+.sheet .tab[data-tab="spells"] .items-section > header,
+.sheet .tab[data-tab="effects"] .items-header,
+.sheet .tab[data-tab="features"] .items-header,
+.sheet .tab[data-tab="spells"] .items-header {
+  background: linear-gradient(90deg, #1a2420, #141a16);
+  border-bottom: 1px solid var(--jj-border);
+}
+
+.sheet .tab[data-tab="effects"] h3,
+.sheet .tab[data-tab="features"] h3,
+.sheet .tab[data-tab="spells"] h3 {
+  color: var(--jj-primary-soft);
+  text-shadow: 0 0 8px rgba(45,138,95,0.3);
+}
+
+.sheet .tab[data-tab="features"] .item:hover,
+.sheet .tab[data-tab="effects"] .item:hover {
+  background: rgba(45,138,95,0.08);
+}
+
+/* ════════════════════════════════════════
+   EFFECTS FIX
+   ════════════════════════════════════════ */
+.sheet .effects-element .items-header,
+.sheet .tab[data-tab="effects"] .items-section > header {
+  background: linear-gradient(90deg, #1a2420, #141a16) !important;
+  border-bottom: 1px solid var(--jj-border) !important;
+}
+
+.effects-element .items-header *,
+.tab[data-tab="effects"] .items-section > header * {
+  color: var(--jj-primary-soft) !important;
+  font-size: 11px !important;
+  text-transform: uppercase;
+}
+
+/* Override crítico do dnd5e base */
+.dnd5e2 .effects-element .items-header {
+  background: var(--dnd5e-color-maroon, #44000f) !important;
+}
+
+
+
+/* ════════════════════════════════════════
+   CURRENCY (YEN)
+   ════════════════════════════════════════ */
+.jj-yen-label {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+}
+
+.jj-yen-symbol {
+  position: absolute;
+  inset: -2px auto auto -2px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--jj-accent-red);
+  filter: drop-shadow(0 0 1px black);
+  pointer-events: none;
+}
+
+.dnd5e2 section.currency input.jj-yen-input {
+  /* centenas de milhões cabem: 999.999.999.999 */
+  width: 230px !important;
+  min-width: 230px !important;
+  font-size: 13px !important;
+}
+
+.dnd5e2 .inventory-element .encumbrance {
+  display: none !important;
+}
+
+/* ════════════════════════════════════════
+   SHEET HEADER — Botão de fixar HUD de Sacrifícios/Recursos
+   ════════════════════════════════════════ */
+.sheet-header .jj-sac-hud-toggle.active {
+  background: rgba(184,115,51,0.35);
+  box-shadow: inset 0 0 0 1px rgba(184,115,51,0.7), 0 0 6px rgba(184,115,51,0.4);
+}
+.sheet-header .jj-sac-hud-toggle.active i { color: #d49a5a; }
+
+/* ════════════════════════════════════════
+   SPELLS — REMOVER PIPS
+   ════════════════════════════════════════ */
+.tab[data-tab="spells"] [class*="pip"] {
+  display: none !important;
+}
+
+/* ════════════════════════════════════════
+   JOURNAL — Banner de topo + moldura + guias (tema Hunter)
+   Técnica do banner igual à do módulo Ember: overlay ::after na JANELA (não no content),
+   z-index bem atrás de tudo, com máscara que revela só o topo e some pra baixo; o conteúdo
+   fica transparente pra o banner aparecer através. Seletor: .dnd5e2-journal (classe real da
+   janela, confirmada no DEFAULT_OPTIONS do sheet) — exceto o editor pop-up (.journal-editor).
+   ════════════════════════════════════════ */
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1000;
+  background:
+    linear-gradient(to bottom, rgba(10,14,13,0.34) 0%, rgba(10,14,13,0.74) 30%, rgba(10,14,13,0.89) 55%),
+    url("../ui/dark-continent.webp") no-repeat top center;
+  background-size: cover;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 15%, transparent 60%);
+  mask-image: linear-gradient(to bottom, #000 0, #000 15%, transparent 60%);
+  pointer-events: none;
+}
+/* Conteúdo transparente pra o banner (atrás) aparecer. !important porque o dnd5e fixa o
+   fundo do .journal-entry-content com um seletor mais específico
+   (.sheet.dnd5e2-journal.journal-entry.application .journal-entry-content). */
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .journal-entry-content,
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .journal-entry-pages,
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .journal-entry-page,
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .journal-page-content,
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .journal-sidebar {
+  background: none !important;
+}
+
+/* ── Moldura da janela — quadro dourado duplo com filete interno e brilho ── */
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin).application {
+  border: 2px solid rgba(184,115,51,0.7);
+  border-radius: 9px;
+  box-shadow:
+    inset 0 0 0 1px rgba(10,14,13,0.9),
+    inset 0 0 0 5px rgba(184,115,51,0.16),
+    inset 0 0 0 6px rgba(184,115,51,0.5),
+    inset 0 0 45px rgba(184,115,51,0.06),
+    0 0 0 1px rgba(0,0,0,0.7),
+    0 12px 40px rgba(0,0,0,0.65),
+    0 0 18px rgba(184,115,51,0.28);
+}
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin).application .window-header {
+  border-bottom: none;
+}
+/* Linha dourada estilizada (desvanece nas pontas) entre o título grande e a página */
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .journal-header {
+  position: relative;
+  border-bottom: none;
+  padding-bottom: 12px;
+  margin-bottom: 8px;
+}
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .journal-header::after {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(to right, transparent, rgba(184,115,51,0.85) 50%, transparent);
+  box-shadow: 0 0 6px rgba(184,115,51,0.35);
+}
+
+/* ── Barra lateral (guias / índice de páginas) ── */
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .journal-sidebar {
+  border-right: 1px solid rgba(184,115,51,0.18);
+}
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .toc li.category > strong {
+  color: #d9b355;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 11px;
+}
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .toc li.page .page-heading {
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 3px 6px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .toc li.page .page-heading:hover {
+  background: rgba(184,115,51,0.1);
+  border-color: rgba(184,115,51,0.3);
+}
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .toc li.page.active .page-heading {
+  background: rgba(184,115,51,0.18);
+  border-color: rgba(184,115,51,0.5);
+  box-shadow: 0 0 8px rgba(184,115,51,0.2);
+}
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .toc .page-index {
+  color: #b87333;
+  font-weight: 700;
+}
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .toc li.page.active .page-title {
+  color: #d49a5a;
+}
+
+/* ── Legibilidade sobre o banner: fundo escuro + borda dourada nos controles ── */
+/* Nome do documento (título da janela) — sem caixa, só sombra pra destacar do banner */
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .window-header .window-title {
+  background: none;
+  border: none;
+  padding: 0;
+  text-shadow: 0 1px 3px #000, 0 0 6px #000;
+}
+/* Caixa de busca — fundo interno escuro sólido + borda visível + texto/placeholder brancos */
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .journal-sidebar input[name="search"] {
+  --input-background-color: rgba(12,16,22,0.35);
+  --input-text-color: #ffffff;
+  --input-placeholder-color: #ffffff;
+  background-color: rgba(12,16,22,0.35) !important;
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.6);
+  border-radius: 4px;
+}
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .journal-sidebar input[name="search"]::placeholder {
+  color: #ffffff;
+  opacity: 0.9;
+}
+/* Ícones (controles da busca + botões de navegação de página) */
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .journal-sidebar search .inline-control,
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .journal-sidebar .action-buttons button {
+  --button-background-color: rgba(0,0,0,0.55);
+  --button-hover-background-color: rgba(184,115,51,0.28);
+  border: 1px solid rgba(184,115,51,0.3);
+  border-radius: 4px;
+}
+/* Texto das guias com sombra pra destacar do banner */
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .toc li.page .page-title,
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .toc li.page .page-index,
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .toc li.category > strong {
+  text-shadow: 0 1px 2px #000, 0 0 6px #000;
+}
+/* Fundo escuro sutil em cada guia pra o texto não sumir no banner */
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .toc li.page .page-heading {
+  background: rgba(0,0,0,0.32);
+}
+/* Remove a borda vermelha (--color-warm-2) do topo/base da página ativa no índice */
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .toc li.page.active:first-of-type,
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .toc li.page.active:last-of-type,
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .toc li.page:not(.active) + .active,
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .toc li.page.active + :not(.active) {
+  border-top-color: transparent !important;
+  border-bottom-color: transparent !important;
+}
+
+/* Título do documento no conteúdo (input .title do header) — sem caixa, não parecer campo */
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .journal-header .title,
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .journal-header input.title {
+  --input-background-color: transparent;
+  background: none !important;
+  border: 1px solid transparent;
+  text-shadow: 0 1px 3px #000, 0 0 6px #000;
+}
+
+/* ── Texto do conteúdo em ouro pálido, pra ler sobre o fundo escuro/banner ── */
+/* !important porque o dnd5e fixa a cor do corpo via --color-text-* com regra mais específica. */
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .journal-entry-page,
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .journal-entry-page :is(p, li, dt, dd, td, th, blockquote, figcaption, span) {
+  color: #e4d4a6 !important;
+}
+.dnd5e2-journal:not(.journal-editor):not(.no-journal-skin) .journal-entry-page :is(h1, h2, h3, h4, h5, h6) {
+  color: #f0d878 !important;
+}
+
+/* Calendário Personalizado — grade de nomes de meses/dias */
+.custom-calendar-config .cc-names-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 4px;
+  margin-top: 4px;
+}
+.custom-calendar-config .cc-names-grid input { width: 100%; }
+.custom-calendar-config fieldset { margin-bottom: 10px; }
+
+
+/* ═══════════════ SISTEMA DE FERIDAS (Wounds) ═══════════════ */
+.wound-bar {
+  height: 14px;
+  margin-top: -1px;
+  border-radius: 0 0 4px 4px;
+  background: rgba(0,0,0,0.5);
+  position: relative;
+  overflow: hidden;
+  cursor: help;
+}
+.wound-bar::after {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+  width: var(--wound-pct, 0%);
+  background: linear-gradient(90deg, #6b0e0e, #c84b4b);
+  transition: width 0.3s ease;
+  box-shadow: inset 0 0 4px rgba(200,75,75,0.5);
+}
+.wound-label {
+  position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
+  font-size: 8px; font-weight: 700; color: #f0a0a0;
+  text-shadow: 0 0 3px rgba(0,0,0,0.9);
+  z-index: 1; letter-spacing: 0.05em;
+}
+
+/* Botão de curar feridas (dentro da wound-bar) */
+.wound-heal-btn {
+  position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
+  background: rgba(45,138,95,0.3); border: 1px solid rgba(45,138,95,0.6);
+  border-radius: 3px; cursor: pointer; padding: 0 3px;
+  font-size: 9px; line-height: 1; z-index: 2;
+  transition: all 120ms;
+}
+.wound-heal-btn:hover {
+  background: rgba(45,138,95,0.5); border-color: rgba(80,180,120,0.9);
+  box-shadow: 0 0 6px rgba(45,138,95,0.4);
+}
+/* Quando tem botão de cura, o label de quantidade fica mais à esquerda */
+.wound-bar:has(.wound-heal-btn) .wound-label { right: 22px; }

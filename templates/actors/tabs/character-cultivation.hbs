@@ -1,0 +1,316 @@
+<section class="tab {{ tab.cssClass }} cultivation-tab" data-tab="{{ tab.id }}" data-group="{{ tab.group }}">
+
+  {{!-- ═══════════════ BARRA DE SUB-ABAS ═══════════════ --}}
+  <div class="cult-subtabs">
+    <button type="button" class="cult-subtab-btn active" data-subtab="cultivo">
+      <i class="fas fa-spa" inert></i> Cultivo
+    </button>
+    <button type="button" class="cult-subtab-btn" data-subtab="corpo">
+      <i class="fas fa-hand-fist" inert></i> Corpo <span class="cult-subtab-lvl">{{ bodyLevel }}/10</span>
+    </button>
+    <button type="button" class="cult-subtab-btn" data-subtab="alma">
+      <i class="fas fa-ghost" inert></i> Alma <span class="cult-subtab-lvl">{{ soulLevel }}/10</span>
+    </button>
+  </div>
+
+  {{!-- ═══════════════ SUB-ABA: CULTIVO ═══════════════ --}}
+  <div class="cult-subtab active" data-subtab-content="cultivo">
+
+  {{!-- ═══════════════ REINO ATUAL (herói) ═══════════════ --}}
+  <div class="cult-hero">
+    <div class="cult-figure-wrap">
+      <span class="cult-aura-ring" aria-hidden="true"></span>
+      <img class="cult-figure" src="{{ cultivation.image }}" alt="Cultivador" />
+    </div>
+
+    <div class="cult-realm">
+      <span class="cult-realm-eyebrow">Reino de Cultivo · Rank {{ cultivation.rank }}/10</span>
+      <h2 class="cult-realm-name">{{ cultivation.name }}</h2>
+      <div class="cult-stages">
+        <span class="cult-stages-label">Estágio</span>
+        <span class="cult-stage-pips">
+          {{#each cultivation.stagePips as |p|}}
+          <i class="cult-pip {{#if p.filled}}on{{/if}}"></i>
+          {{/each}}
+        </span>
+        <span class="cult-stage-num">{{ cultivation.stage }} / {{ cultivation.stageMax }}</span>
+      </div>
+    </div>
+  </div>
+
+  {{!-- ═══════════════ PONTOS DE QI ═══════════════ --}}
+  <div class="cult-qi">
+    <div class="cult-essence-head">
+      <span class="cult-qi-title">Pontos de Qi</span>
+      <span class="cult-essence-nums">
+        {{!-- SEM `name`: a sidebar já tem um input system.energy.total no mesmo form;
+              nomes duplicados viram array no submit e quebram a validação. Este campo
+              grava direto via listener (data-cult-qi) no _onRender. --}}
+        <input type="text" class="cult-essence-input" data-cult-qi
+               value="{{ cultivation.qi.value }}" placeholder="0" />
+        <span class="cult-essence-sep">/</span>
+        <span class="cult-essence-max">{{ cultivation.qi.max }}</span>
+      </span>
+    </div>
+    <div class="cult-essence-track">
+      <div class="cult-qi-fill" style="width: {{ cultivation.qi.pct }}%;"></div>
+    </div>
+  </div>
+
+  {{!-- ═══════════════ PONTOS DE ILUMINAÇÃO ═══════════════ --}}
+  <div class="cult-illumination">
+    <div class="cult-illumination-head">
+      <span class="cult-illumination-title">
+        <i class="fas fa-lightbulb" inert></i>
+        Pontos de Iluminação
+      </span>
+      <span class="cult-illumination-nums">
+        <input type="number" class="cult-illumination-input" name="system.cultivation.illumination"
+               data-dtype="Number" value="{{ cultivation.illumination }}" min="0" placeholder="0" />
+      </span>
+    </div>
+    <div class="cult-illumination-hint">
+      <span data-tooltip="Consumir 1 PI: reduz a CD de um avanço em 3"><i class="fas fa-arrow-down" inert></i> Reduzir Dificuldade <strong>1</strong></span>
+      <span data-tooltip="Consumir 3 PI: avança automaticamente para o próximo Rank"><i class="fas fa-bolt" inert></i> Iluminação Profunda <strong>3</strong></span>
+      <span data-tooltip="Consumir 1 PI: reduz CD de profissão/elemento e PC de Cultivo em 3"><i class="fas fa-brain" inert></i> Entendimento <strong>1</strong></span>
+    </div>
+  </div>
+
+  {{!-- ═══════════════ ESSÊNCIA DE QI ═══════════════ --}}
+  <div class="cult-essence">
+    <div class="cult-essence-head">
+      <span class="cult-essence-title">Essência de Qi</span>
+      <span class="cult-essence-nums">
+        <input type="text" class="cult-essence-input" name="system.cultivation.essence"
+               data-dtype="Number" value="{{ cultivation.essence }}" placeholder="0" />
+        <span class="cult-essence-sep">/</span>
+        <span class="cult-essence-max">{{ dnd5e-numberFormat cultivation.essMax }}</span>
+      </span>
+    </div>
+    <div class="cult-essence-track">
+      <div class="cult-essence-fill {{#if cultivation.essFull}}full{{/if}}" style="width: {{ cultivation.essencePct }}%;"></div>
+    </div>
+    {{#if cultivation.essGoalIsNext}}
+    <p class="cult-essence-hint">3º estágio: junte <strong>{{ dnd5e-numberFormat cultivation.essMax }}</strong> de Essência (o custo do próximo Rank) para tentar o <strong>Rompimento</strong>.</p>
+    {{else}}
+    <p class="cult-essence-hint">Some a Essência de Qi acumulada por dia de cultivo. Ao encher, gaste {{ cultivation.advanceCost }} PC para avançar de estágio.</p>
+    {{/if}}
+  </div>
+
+  {{!-- ═══════════════ AVANÇOS ═══════════════ --}}
+  <div class="cult-actions">
+    {{#unless cultivation.atStageMax}}
+    <button type="button" class="cult-btn cult-btn-advance" data-action="cultivationAdvanceStage"
+            {{#unless cultivation.canAdvanceStage}}disabled{{/unless}}
+            data-tooltip="{{#if cultivation.essFull}}Avançar para o próximo estágio{{else}}Encha a Essência de Qi primeiro{{/if}}">
+      <i class="fas fa-arrow-up" inert></i>
+      <span class="cult-btn-main">Avançar Estágio</span>
+      <span class="cult-btn-cost">{{ cultivation.advanceCost }} PC</span>
+    </button>
+    {{else}}
+    <button type="button" class="cult-btn cult-btn-breakthrough" data-action="cultivationBreakthrough"
+            {{#unless cultivation.canBreakthrough}}disabled{{/unless}}
+            data-tooltip="{{#if cultivation.atRankMax}}Você atingiu o ápice: Divindade{{else if cultivation.essFull}}Reclusão: 1d20 CD {{ cultivation.breakthroughCD }} · falha causa Ferimento Persistente · pode gastar PI p/ reduzir a CD (−3 por PI){{else}}Requer {{ dnd5e-numberFormat cultivation.essMax }} de Essência de Qi acumulada{{/if}}">
+      <i class="fas fa-bolt" inert></i>
+      <span class="cult-btn-main">
+        {{#if cultivation.atRankMax}}Ápice Atingido{{else}}Romper → {{ cultivation.nextRankName }}{{/if}}
+      </span>
+      {{#unless cultivation.atRankMax}}<span class="cult-btn-cost">{{ cultivation.breakthroughCost }} PC · CD {{ cultivation.breakthroughCD }}</span>{{/unless}}
+    </button>
+    {{#unless cultivation.atRankMax}}
+    <button type="button" class="cult-btn cult-btn-illumination" data-action="cultivationProfoundIllumination"
+            {{#unless cultivation.canProfoundIllumination}}disabled{{/unless}}
+            data-tooltip="{{#if cultivation.canProfoundIllumination}}Iluminação Profunda: avança automaticamente para {{ cultivation.nextRankName }} sem rolagem{{else}}Requer 3 Pontos de Iluminação (e Essência cheia){{/if}}">
+      <i class="fas fa-lightbulb" inert></i>
+      <span class="cult-btn-main">Iluminação Profunda</span>
+      <span class="cult-btn-cost">3 PI</span>
+    </button>
+    {{/unless}}
+    {{/unless}}
+    <span class="cult-pt-avail" data-tooltip="Pontos de Cultivo disponíveis">
+      <i class="fas fa-hand-fist" inert></i> {{ cultivation.pt }} PT
+    </span>
+  </div>
+
+  {{!-- ═══════════════ ESCADA DOS 10 REINOS ═══════════════ --}}
+  <div class="cult-ladder">
+    <div class="cult-ladder-title">Caminho da Ascensão</div>
+    {{#each cultivation.ranks as |r|}}
+    <div class="cult-rung {{ r.state }}">
+      <span class="cult-rung-rank">{{ r.rank }}</span>
+      <span class="cult-rung-name">{{ r.name }}</span>
+      <span class="cult-rung-ess">{{ dnd5e-numberFormat r.essence }} <small>Qi/nv</small></span>
+      <span class="cult-rung-mark">
+        {{#if (eq r.state "past")}}<i class="fas fa-check" inert></i>{{/if}}
+        {{#if (eq r.state "current")}}<i class="fas fa-spa" inert></i>{{/if}}
+        {{#if (eq r.state "future")}}<i class="fas fa-lock" inert></i>{{/if}}
+      </span>
+    </div>
+    {{/each}}
+  </div>
+
+  </div>{{!-- fim .cult-subtab[data-subtab-content=cultivo] --}}
+
+  {{!-- ═══════════════ SUB-ABA: CORPO ═══════════════ --}}
+  <div class="cult-subtab" data-subtab-content="corpo">
+
+  {{!-- HERÓI (mesmo modelo da aba Cultivo) --}}
+  <div class="cult-hero">
+    <div class="cult-figure-wrap">
+      <span class="cult-aura-ring body" aria-hidden="true"></span>
+      <img class="cult-figure" src="{{ bodyImage }}" alt="Cultivador do Corpo" />
+    </div>
+    <div class="cult-realm">
+      <span class="cult-realm-eyebrow">Caminho do Corpo · Nível {{ bodyLevel }}/10</span>
+      <h2 class="cult-realm-name">{{#if bodyCurrent}}{{ bodyCurrent.name }}{{else}}Início do Caminho{{/if}}</h2>
+      {{#if bodyCurrent}}
+      <div class="cult-stages">
+        <span class="cult-stages-label">Nível atual</span>
+        <span class="cult-stage-num">{{ bodyLevel }} / 10</span>
+      </div>
+      {{/if}}
+    </div>
+  </div>
+
+  {{!-- PÍLULAS (mesmo estilo das caixas de Qi/Essência) --}}
+  <div class="cult-essence cult-pills-panel">
+    <div class="cult-essence-head">
+      <span class="cult-essence-title"><i class="fas fa-prescription-bottle-medical" inert></i> Pílulas do Sangue Divino</span>
+    </div>
+    <div class="cult-pills-grid">
+      {{#each bodyPills as |p|}}
+      <label class="cult-pill-field">
+        <span class="cult-pill-lvl">Nv{{ p.level }}</span>
+        <input type="number" class="cult-pill-input" min="0"
+               name="system.cultivation.bodyPills.{{ p.level }}"
+               value="{{ p.count }}" data-dtype="Number" />
+      </label>
+      {{/each}}
+    </div>
+  </div>
+
+  {{!-- AÇÕES (mesmo estilo da aba Cultivo) --}}
+  <div class="cult-actions">
+    {{#if (lt bodyLevel 10)}}
+    <button type="button" class="cult-btn cult-btn-advance" data-action="cultivationAdvancePath" data-path="body"
+            data-tooltip="Avançar para o nível {{ bodyNext.level }}: {{ bodyNext.name }}">
+      <i class="fas fa-arrow-up" inert></i>
+      <span class="cult-btn-main">Avançar para Nv. {{ bodyNext.level }}</span>
+      <span class="cult-btn-cost">{{ bodyNext.name }}</span>
+    </button>
+    {{else}}
+    <span class="cult-btn cult-btn-advance" style="opacity:0.6;">
+      <i class="fas fa-star" inert></i>
+      <span class="cult-btn-main">Caminho Dominado</span>
+    </span>
+    {{/if}}
+    <span class="cult-pt-avail" data-tooltip="Requisitos do próximo nível">
+      {{#if bodyNext.req}}
+      <i class="fas fa-calendar" inert></i> {{ bodyNext.req.dias }}d ·
+      <i class="fas fa-hand-fist" inert></i> {{ bodyNext.req.pt }} PC ·
+      {{ bodyNext.req.pills }} pílulas
+      {{/if}}
+    </span>
+  </div>
+
+  {{!-- ESCADA DOS 10 NÍVEIS (mesmo estilo da escada de ranks) --}}
+  <div class="cult-ladder">
+    <div class="cult-ladder-title">Portões do Corpo</div>
+    {{#each bodyPath as |n|}}
+    <div class="cult-rung state-{{ n.state }}" data-tooltip="{{ n.name }}: {{ n.description }}{{#if n.req}}&#10;Requisitos: {{ n.req.dias }} dias · {{ n.req.pt }} PC · {{ n.req.pills }}× {{ n.req.pillName }} (Nv{{ n.req.pillLevel }}){{/if}}">
+      <span class="cult-rung-rank">{{ n.level }}</span>
+      <span class="cult-rung-name">{{ n.name }}</span>
+      <span></span>{{!-- coluna placeholder (alinhamento com a escada de ranks) --}}
+      <span class="cult-rung-mark">
+        {{#if (eq n.state "completed")}}<i class="fas fa-check" inert></i>{{/if}}
+        {{#if (eq n.state "current")}}<i class="fas fa-hand-fist" inert></i>{{/if}}
+        {{#if (eq n.state "locked")}}<i class="fas fa-lock" inert></i>{{/if}}
+      </span>
+    </div>
+    {{/each}}
+  </div>
+
+  </div>{{!-- fim .cult-subtab[corpo] --}}
+
+  {{!-- ═══════════════ SUB-ABA: ALMA ═══════════════ --}}
+  <div class="cult-subtab" data-subtab-content="alma">
+
+  {{!-- HERÓI --}}
+  <div class="cult-hero">
+    <div class="cult-figure-wrap">
+      <span class="cult-aura-ring soul" aria-hidden="true"></span>
+      <img class="cult-figure" src="{{ soulImage }}" alt="Cultivador da Alma" />
+    </div>
+    <div class="cult-realm">
+      <span class="cult-realm-eyebrow">Caminho da Alma · Nível {{ soulLevel }}/10</span>
+      <h2 class="cult-realm-name">{{#if soulCurrent}}{{ soulCurrent.name }}{{else}}Início do Caminho{{/if}}</h2>
+      {{#if soulCurrent}}
+      <div class="cult-stages">
+        <span class="cult-stages-label">Nível atual</span>
+        <span class="cult-stage-num">{{ soulLevel }} / 10</span>
+      </div>
+      {{/if}}
+    </div>
+  </div>
+
+  {{!-- PÍLULAS --}}
+  <div class="cult-essence cult-pills-panel">
+    <div class="cult-essence-head">
+      <span class="cult-essence-title"><i class="fas fa-prescription-bottle-medical" inert></i> Pílulas da Nutrição da Alma</span>
+    </div>
+    <div class="cult-pills-grid">
+      {{#each soulPills as |p|}}
+      <label class="cult-pill-field">
+        <span class="cult-pill-lvl">Nv{{ p.level }}</span>
+        <input type="number" class="cult-pill-input" min="0"
+               name="system.cultivation.soulPills.{{ p.level }}"
+               value="{{ p.count }}" data-dtype="Number" />
+      </label>
+      {{/each}}
+    </div>
+  </div>
+
+  {{!-- AÇÕES --}}
+  <div class="cult-actions">
+    {{#if (lt soulLevel 10)}}
+    <button type="button" class="cult-btn cult-btn-advance" data-action="cultivationAdvancePath" data-path="soul"
+            data-tooltip="Avançar para o nível {{ soulNext.level }}: {{ soulNext.name }}">
+      <i class="fas fa-arrow-up" inert></i>
+      <span class="cult-btn-main">Avançar para Nv. {{ soulNext.level }}</span>
+      <span class="cult-btn-cost">{{ soulNext.name }}</span>
+    </button>
+    {{else}}
+    <span class="cult-btn cult-btn-advance" style="opacity:0.6;">
+      <i class="fas fa-star" inert></i>
+      <span class="cult-btn-main">Caminho Dominado</span>
+    </span>
+    {{/if}}
+    <span class="cult-pt-avail" data-tooltip="Requisitos do próximo nível">
+      {{#if soulNext.req}}
+      <i class="fas fa-calendar" inert></i> {{ soulNext.req.dias }}d ·
+      <i class="fas fa-hand-fist" inert></i> {{ soulNext.req.pt }} PC ·
+      {{ soulNext.req.pills }} pílulas
+      {{/if}}
+    </span>
+  </div>
+
+  {{!-- ESCADA DOS 10 NÍVEIS --}}
+  <div class="cult-ladder">
+    <div class="cult-ladder-title">Revoluções da Alma</div>
+    {{#each soulPath as |n|}}
+    <div class="cult-rung state-{{ n.state }}" data-tooltip="{{ n.name }}: {{ n.description }}{{#if n.req}}&#10;Requisitos: {{ n.req.dias }} dias · {{ n.req.pt }} PC · {{ n.req.pills }}× {{ n.req.pillName }} (Nv{{ n.req.pillLevel }}){{/if}}">
+      <span class="cult-rung-rank">{{ n.level }}</span>
+      <span class="cult-rung-name">{{ n.name }}</span>
+      <span></span>{{!-- coluna placeholder (alinhamento com a escada de ranks) --}}
+      <span class="cult-rung-mark">
+        {{#if (eq n.state "completed")}}<i class="fas fa-check" inert></i>{{/if}}
+        {{#if (eq n.state "current")}}<i class="fas fa-ghost" inert></i>{{/if}}
+        {{#if (eq n.state "locked")}}<i class="fas fa-lock" inert></i>{{/if}}
+      </span>
+    </div>
+    {{/each}}
+  </div>
+
+  </div>{{!-- fim .cult-subtab[alma] --}}
+
+</section>

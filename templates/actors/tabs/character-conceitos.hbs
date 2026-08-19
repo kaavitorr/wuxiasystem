@@ -1,0 +1,156 @@
+<section class="tab {{ tab.cssClass }} conceitos-section" data-tab="{{ tab.id }}" data-group="{{ tab.group }}">
+
+  {{!-- ════════════════ CABEÇALHO: TÍTULO + PONTOS DE CULTIVO ════════════════ --}}
+  <div class="conceitos-header">
+    <h2 class="conceitos-title"><i class="fas fa-fire-flame-curved" inert></i> {{ localize "WUXIA.Conceitos.Title" }}</h2>
+  </div>
+
+  <div class="conceitos-pc-box">
+    <div class="conceitos-pc-grid">
+      <div class="conceitos-pc-field pc-avail">
+        <label>PC Atual</label>
+        <span class="conceitos-pc-val">{{ nenAvailablePoints }}</span>
+      </div>
+      <div class="conceitos-pc-field">
+        <label>PC Jogador</label>
+        <input type="number" name="system.curseResources.trainingPoints"
+          value="{{nenTrainingPoints}}" min="0" />
+      </div>
+      <div class="conceitos-pc-field {{#unless nenIsGM}}readonly{{/unless}}">
+        <label>PC Narrador</label>
+        {{#if nenIsGM}}
+        <input type="number" name="system.curseResources.narratorTrainingPoints"
+          value="{{nenNarratorTrainingPoints}}" min="0" />
+        {{else}}
+        <input type="number" value="{{nenNarratorTrainingPoints}}" disabled />
+        {{/if}}
+      </div>
+      <div class="conceitos-pc-field readonly">
+        <label>PC Consumidos</label>
+        <span class="conceitos-pc-val">{{nenSpentTrainingPoints}}</span>
+      </div>
+      <div class="conceitos-pc-field readonly">
+        <label>PC Perdidos</label>
+        <span class="conceitos-pc-val">{{nenLostTrainingPoints}}</span>
+      </div>
+    </div>
+  </div>
+
+  {{!-- ════════════════ ELEMENTOS POR RARIDADE ════════════════ --}}
+  {{#each conceitosGrupos as |grupo|}}
+  <div class="conceitos-grupo conceitos-raridade-{{grupo.raridade}}">
+    <h3 class="conceitos-grupo-title">{{ localize grupo.label }}</h3>
+    <div class="conceitos-grid">
+      {{#each grupo.elementos as |el|}}
+      <div class="conceito-card {{#if el.atMax}}maxed{{/if}}"
+           style="--el-color: {{el.cor}}">
+
+        {{!-- IDENTIDADE --}}
+        <div class="conceito-identity">
+          {{#unless el.atMax}}
+          <button type="button" class="conceito-train-btn item-action" data-action="trainConceito"
+                  data-elemento="{{el.id}}"
+                  {{#unless el.canTrain}}disabled{{/unless}}
+                  data-tooltip="{{#if el.canTrain}}{{localize 'WUXIA.Conceitos.TrainTo'}} {{el.nextLevel}}{{else}}{{localize 'WUXIA.Conceitos.NoResources'}}{{/if}}">
+            <img class="conceito-icon" src="{{el.icon}}" alt="{{el.label}}" />
+          </button>
+          {{else}}
+          <img class="conceito-icon maxed-icon" src="{{el.icon}}" alt="{{el.label}}" />
+          {{/unless}}
+          <span class="conceito-name">{{el.label}}</span>
+        </div>
+
+        {{!-- NÍVEL + BARRA SEGMENTADA --}}
+        <div class="conceito-level-row">
+          <span class="conceito-level-num" style="color: {{el.cor}}">{{el.level}}</span>
+          <span class="conceito-level-max">/10</span>
+        </div>
+        <div class="conceito-segbar">
+          {{#each el.levelSegments as |on|}}
+          <i class="{{#if on}}on{{/if}}"></i>
+          {{/each}}
+        </div>
+
+        {{!-- CUSTOS DO PRÓXIMO NÍVEL --}}
+        {{#unless el.atMax}}
+        <div class="conceito-cost-pills">
+          <span class="conceito-pill" {{#unless el.canTrain}}title="{{localize 'WUXIA.Conceitos.NoResources'}}"{{/unless}}>{{el.custo.pt}} PC</span>
+          <span class="conceito-pill">{{el.custo.qi}} Qi</span>
+          <span class="conceito-pill">CD {{el.custo.cd}}</span>
+          <span class="conceito-pill dias">{{el.custo.dias}}d</span>
+        </div>
+        {{else}}
+        <div class="conceito-cost-pills">
+          <span class="conceito-pill maxed-pill">✦ {{localize 'WUXIA.Conceitos.MaxLevel'}}</span>
+        </div>
+        {{/unless}}
+
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/each}}
+
+  {{!-- ═══════════════ HABILIDADES ELEMENTAIS ═══════════════ --}}
+  {{#if elementAbilGroups.length}}
+  <div class="element-abil-section">
+    <h2 class="element-abil-title">Habilidades Elementais</h2>
+    <div class="element-abil-count-row">
+      <span class="element-abil-count">{{ elementAbilTotal }} / {{ elementAbilMax }} habilidades</span>
+    </div>
+    {{#each elementAbilGroups as |grupo|}}
+    <div class="element-abil-box" style="--el-color: {{ grupo.elementColor }}">
+      <div class="element-abil-box-header">
+        {{#if grupo.elementIcon}}<img class="element-abil-box-icon" src="{{ grupo.elementIcon }}" alt="">{{/if}}
+        <span class="element-abil-box-name">{{ grupo.elementLabel }}</span>
+        <span class="element-abil-box-level">Nv. {{ grupo.elementLevel }} · {{ grupo.pointsSpent }}/{{ grupo.elementLevel }}</span>
+      </div>
+      <div class="element-abil-cards">
+        {{#each grupo.abilities as |ab|}}
+        <div class="element-abil-card tier-{{ ab.tier }} {{#if (gt ab.tier 0)}}has-ability{{/if}}"
+             {{#if (gt ab.tier 0)}}data-action="undoElementAbility" data-element="{{ grupo.elementId }}" data-ability="{{ ab.id }}" data-tier="{{ ab.tier }}"{{/if}}
+             data-tooltip="{{#if ab.desc}}{{ ab.desc }}{{#if ab.dominado}}<br><strong>Dominado ★★:</strong> {{ ab.dominado }}{{/if}}{{#if ab.perfeicao}}<br><strong>Perfeição ★★★:</strong> {{ ab.perfeicao }}{{/if}}{{/if}}{{#if (gt ab.tier 0)}}&#10;_botão direito para desfazer_{{/if}}">
+          <div class="element-abil-card-left">
+            {{#if (and ab.canAcquire @root.elementAbilEditable)}}
+            <button type="button" class="element-abil-circle acquire" data-action="acquireElementAbility"
+                    data-element="{{ grupo.elementId }}" data-ability="{{ ab.id }}"
+                    data-tooltip="Clique para aprender {{ ab.name }}">
+              {{#if grupo.elementIcon}}<img src="{{ grupo.elementIcon }}" alt="">{{else}}<i class="fas fa-plus"></i>{{/if}}
+            </button>
+            {{else if (and ab.canDominado @root.elementAbilEditable)}}
+            <button type="button" class="element-abil-circle upgrade" data-action="upgradeElementAbility"
+                    data-element="{{ grupo.elementId }}" data-ability="{{ ab.id }}" data-tier="2"
+                    data-tooltip="Clique para dominar (★★)">
+              {{#if grupo.elementIcon}}<img src="{{ grupo.elementIcon }}" alt="">{{else}}<i class="fas fa-plus"></i>{{/if}}
+            </button>
+            {{else if (and ab.canPerfeicao @root.elementAbilEditable)}}
+            <button type="button" class="element-abil-circle upgrade" data-action="upgradeElementAbility"
+                    data-element="{{ grupo.elementId }}" data-ability="{{ ab.id }}" data-tier="3"
+                    data-tooltip="Clique para alcançar a Perfeição (★★★)">
+              {{#if grupo.elementIcon}}<img src="{{ grupo.elementIcon }}" alt="">{{else}}<i class="fas fa-plus"></i>{{/if}}
+            </button>
+            {{else if (and ab.canLevel10 @root.elementAbilEditable)}}
+            <button type="button" class="element-abil-circle lvl10" data-action="upgradeElementAbility"
+                    data-element="{{ grupo.elementId }}" data-ability="{{ ab.id }}" data-tier="1"
+                    data-tooltip="Habilidade de Nível 10!">
+              {{#if grupo.elementIcon}}<img src="{{ grupo.elementIcon }}" alt="">{{else}}<i class="fas fa-star"></i>{{/if}}
+            </button>
+            {{else}}
+            <div class="element-abil-circle tier-display tier-{{ ab.tier }}">
+              {{#if grupo.elementIcon}}<img src="{{ grupo.elementIcon }}" alt="">{{/if}}
+            </div>
+            {{/if}}
+          </div>
+          <div class="element-abil-card-right">
+            <div class="element-abil-card-name">{{ ab.name }}</div>
+            {{#if ab.tierLabel}}<span class="element-abil-card-stars">{{ ab.tierLabel }}</span>{{/if}}
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+    {{/each}}
+  </div>
+  {{/if}}
+
+</section>

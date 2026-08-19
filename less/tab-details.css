@@ -1,0 +1,1249 @@
+/* ══════════════════════════════════════════════════════
+   TAB DETAILS — Aba de Detalhes + Sidebar
+   Sistema Hunter x Hunter — Foundry VTT
+
+   NOTA: A maioria dos elementos da sidebar (HP, Aura,
+   portrait, lozenges, favorites) usam o estilo padrão
+   do dnd5e.css sem override. Só incluir aqui o que
+   realmente precisa ser customizado.
+   ══════════════════════════════════════════════════════ */
+
+/* ════════════════════════════════════════
+   SIDEBAR — Habilidades em filigree-box
+   (Explosão Defensiva, Foco Agressivo/Defensivo)
+   ════════════════════════════════════════ */
+
+/* Wrapper — 1 coluna padrão, 2 colunas quando duo */
+.jj-habilidades-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3px;
+  margin: 2px 8px;
+  min-width: 0;
+}
+
+.jj-habilidades-row + .jj-habilidades-row { margin-top: 14px; }
+
+.jj-habilidades-row.jj-habilidades-duo {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Separação visual entre a lista de Favoritos e os botões de poder */
+.favorites > ul.unlist + .jj-habilidades-row {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(200, 168, 75, 0.15);
+}
+
+/* Quando a sidebar está colapsada, esconde os botões pra não vazarem */
+.sidebar-collapsed .main-content > .sidebar .jj-habilidades-row { display: none; }
+
+/* ════════════════════════════════════════
+   PONTOS DE AURA + AURA GERADA — barras estilo HP (NPC)
+   ════════════════════════════════════════ */
+.dnd5e2.sheet.actor.npc .sheet-header .vitals .meter.aura-points,
+.dnd5e2.sheet.actor.npc .sheet-header .vitals .meter.aura-generated {
+  block-size: 20px;
+  font-size: var(--font-size-12);
+  margin-top: -1px;
+}
+
+.dnd5e2.sheet.actor.npc .sheet-header .vitals .meter.aura-points .label,
+.dnd5e2.sheet.actor.npc .sheet-header .vitals .meter.aura-generated .label {
+  padding-inline-start: 12px;
+}
+
+.dnd5e2.sheet.actor.npc.editable .sheet-header .vitals
+  :is(.aura-points, .aura-generated) .label {
+  padding-inline-end: 6px;
+}
+
+.dnd5e2.sheet.actor.npc.editable .sheet-header .vitals
+  :is(.aura-points, .aura-generated) .label .config-button {
+  color: inherit;
+  font-size: var(--font-size-10);
+  margin-left: auto;
+}
+
+.dnd5e2.sheet.actor.npc .meter.aura-points .progress::before,
+.dnd5e2.sheet.actor.npc .meter.aura-generated .progress::before {
+  block-size: unset;
+  clip-path: unset;
+  box-shadow: inset 0 1px 0 1px var(--dnd5e-highlight-40);
+  inset: 1px auto 1px 1px;
+  inline-size: calc(var(--bar-percentage) - 2px);
+  border-radius: 2px;
+  border-inline-end: none;
+}
+
+.dnd5e2.sheet.actor.npc .meter.aura-points .progress::before {
+  background: linear-gradient(to right, #ff973c 0%, #c66818 100%);
+}
+
+.dnd5e2.sheet.actor.npc .meter.aura-generated .progress::before {
+  background: linear-gradient(to right, #2bd6c8 0%, #128a84 100%);
+}
+
+/* (REMOVIDO) Efeito de "aura fluindo" (listras animadas jj-energy-flow) sobre a barra
+   de Pontos de Aura do NPC — ficou ruim; a ser refeito depois com outra abordagem. */
+
+/* Habilita click-to-edit nas barras (igual a .hit-points) */
+.dnd5e2.sheet.actor .meter.sectioned > .aura-points,
+.dnd5e2.sheet.actor .meter.sectioned > .aura-generated {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: var(--cursor-pointer);
+}
+
+.dnd5e2.sheet.actor .meter.sectioned > .aura-points > input,
+.dnd5e2.sheet.actor .meter.sectioned > .aura-generated > input {
+  position: relative;
+}
+
+/* ── Header (Foco) ── */
+.jj-foco-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 8px 5px;
+  border: none;
+  margin: 0;
+}
+
+.jj-foco-header i {
+  font-size: 10px;
+}
+
+.jj-foco-header span {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+/* ── Header (Explosão Defensiva) ── */
+.jj-expdef-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px 5px;
+  border: none;
+  margin: 0;
+  position: relative;
+}
+
+/* Divisória horizontal entre cabeçalho e botão — mesma da Agressivo/Defensivo.
+   Ancorada no TOPO do wrapper do botão (div), não em pseudo de h3 (que não renderizava). */
+.jj-expdef-btn-wrap::before {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #24456e 25%, #24456e 75%, transparent);
+  pointer-events: none;
+}
+
+.jj-expdef-header i {
+  font-size: 10px;
+  color: #5b9ee8;
+  animation: jj-expdef-pulse 2s ease-in-out infinite;
+}
+
+.jj-expdef-header span {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #a9c6e8;
+}
+
+/* ── Wrapper do botão ── */
+.jj-expdef-btn-wrap {
+  position: relative;      /* âncora da divisória (::before no topo) */
+  padding: 8px 10px 6px;
+}
+
+/* ── Botão base (Foco) ── */
+.jj-foco-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px;
+  width: 100%;
+  background: #040a10;
+  border: 1px solid #0a1a2a;
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #1a2840;
+  cursor: pointer;
+  transition: all 140ms;
+}
+
+.jj-foco-btn i {
+  font-size: 13px;
+  color: #152030;
+  transition: color 140ms;
+}
+
+.jj-foco-btn:disabled {
+  cursor: not-allowed;
+  filter: grayscale(1);
+  opacity: 0.4;
+}
+
+/* ── Botão (Explosão Defensiva) — pílula centralizada ── */
+.jj-expdef-trigger-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 7px 10px;
+  background: rgba(45, 95, 190, 0.12);
+  border: 1px solid rgba(60, 120, 210, 0.4);
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #bcd8f5;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, transform 60ms ease;
+}
+
+.jj-expdef-trigger-btn:hover {
+  background: rgba(60, 120, 210, 0.22);
+  border-color: rgba(90, 160, 230, 0.65);
+  color: #d8ecff;
+}
+.jj-expdef-trigger-btn:active { transform: translateY(1px); }
+
+/* ══ PLACA NEN — painel HxH (chanfro + fio interno + kanji marca-d'água) ══
+   Substitui as filigree-box dos poderes da sidebar/aba Effects. O kanji vem
+   do atributo data-kanji de cada placa (練 凝 硬 円). */
+.jj-nen-panel {
+  position: relative;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 7px 9px;
+  background:
+    linear-gradient(155deg, rgba(184,115,51,0.05), transparent 45%),
+    linear-gradient(180deg, #10141c, #0a0e14);
+  border: 1px solid #262c38;
+  clip-path: polygon(9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px),
+                     calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px), 0 9px);
+  box-shadow: inset 0 0 0 1px rgba(184,115,51,0.10), inset 0 0 20px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+.jj-nen-panel::before {
+  content: attr(data-kanji);
+  position: absolute; right: -4px; bottom: -16px;
+  font: 700 50px/1 var(--dnd5e-font-roboto-slab, serif);
+  color: rgba(184,115,51,0.08);
+  pointer-events: none;
+  z-index: 0;
+}
+.jj-nen-panel > * { position: relative; z-index: 1; }
+
+/* ── Explosão Defensiva (azul) ── */
+.jj-nen-panel.jj-expdef-box {
+  background:
+    linear-gradient(155deg, rgba(60,120,210,0.07), transparent 45%),
+    linear-gradient(180deg, #0c1420, #080e18);
+  border-color: #1c3050;
+  box-shadow: inset 0 0 0 1px rgba(80,140,230,0.13), inset 0 0 20px rgba(0,0,0,0.5);
+}
+.jj-nen-panel.jj-expdef-box::before { color: rgba(90,150,240,0.09); }
+
+@keyframes jj-expdef-pulse {
+  0%, 100% { text-shadow: 0 0 4px rgba(70,130,230,0.35); }
+  50%       { text-shadow: 0 0 10px rgba(70,130,230,0.85), 0 0 18px rgba(50,100,210,0.35); }
+}
+
+@keyframes jj-expdef-glow {
+  0%, 100% { box-shadow: inset 0 0 5px rgba(40,80,180,0.1); }
+  50%       { box-shadow: inset 0 0 10px rgba(40,80,200,0.2), 0 0 6px rgba(30,60,180,0.15); }
+}
+
+/* ── Foco Agressivo (vermelho/laranja) ── */
+filigree-box.jj-foco-agressivo-box {
+  --filigree-background-color: #1a0808;
+  --filigree-border-color: #501818;
+  --filigree-drop-shadow: drop-shadow(0 0 3px rgba(200, 80, 60, 0.25));
+  display: block;
+}
+
+.jj-foco-agressivo-box .jj-foco-header i { color: #a04030; }
+.jj-foco-agressivo-box .jj-foco-header span { color: #b07060; }
+
+.jj-foco-btn.jj-foco-agressivo:hover:not(:disabled) { border-color: #703020; color: #a04030; }
+.jj-foco-btn.jj-foco-agressivo:hover:not(:disabled) i { color: #802818; }
+.jj-foco-btn.jj-foco-agressivo.active {
+  background: #100404;
+  border-color: #a02818;
+  color: #d04030;
+  animation: jj-foco-agressivo-glow 2s ease-in-out infinite;
+}
+.jj-foco-btn.jj-foco-agressivo.active i { color: #c04020; }
+
+@keyframes jj-foco-agressivo-glow {
+  0%, 100% { box-shadow: inset 0 0 5px rgba(200,60,40,0.1); }
+  50%       { box-shadow: inset 0 0 10px rgba(220,80,40,0.25), 0 0 6px rgba(180,40,30,0.18); }
+}
+
+/* ── Foco Combo Box (Agressivo + Defensivo numa única placa) ── */
+.jj-nen-panel.jj-foco-combo-box {
+  min-width: 0;
+  background:
+    linear-gradient(155deg, rgba(200,90,50,0.05), transparent 40%),
+    linear-gradient(205deg, rgba(60,120,210,0.05), transparent 40%),
+    linear-gradient(180deg, #0e121a, #090d13);
+  border-color: #2a2c38;
+}
+.jj-nen-panel.jj-foco-combo-box::before { color: rgba(210,140,90,0.08); }
+
+.jj-foco-combo-header {
+  display: flex;
+  align-items: center;
+  border: none;
+  position: relative;
+  padding: 6px 14px 4px;
+  min-width: 0;
+}
+.jj-foco-combo-header h3 { border: none; box-shadow: none; }
+.jj-foco-combo-header .jj-foco-combo-side { flex: 1 1 0; min-width: 0; border: none; }
+
+/* Divisor horizontal: gradiente que some nas pontas, igual ao vertical */
+.jj-foco-combo-header::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #24456e 25%, #24456e 75%, transparent);
+  pointer-events: none;
+}
+
+.jj-foco-combo-body {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 6px 10px 10px;
+  min-width: 0;
+}
+
+.jj-foco-combo-body > .jj-foco-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  padding: 7px 8px;
+  font-size: 10px;
+  white-space: nowrap;   /* "38/38 PA" nunca quebra em duas linhas */
+}
+
+.jj-foco-combo-body > .jj-foco-btn i { font-size: 12px; }
+
+.jj-foco-combo-body > .jj-foco-btn.jj-foco-agressivo:not(:disabled) {
+  background: rgba(200, 70, 50, 0.08);
+  border-color: rgba(200, 70, 50, 0.3);
+  color: #d0a090;
+}
+.jj-foco-combo-body > .jj-foco-btn.jj-foco-agressivo:not(:disabled) i { color: #c06040; }
+.jj-foco-combo-body > .jj-foco-btn.jj-foco-agressivo:hover:not(:disabled) {
+  background: rgba(200, 70, 50, 0.16);
+  border-color: rgba(200, 70, 50, 0.5);
+}
+
+.jj-foco-combo-body > .jj-foco-btn.jj-foco-defensivo:not(:disabled) {
+  background: rgba(50, 100, 200, 0.08);
+  border-color: rgba(50, 100, 200, 0.3);
+  color: #90b0d0;
+}
+.jj-foco-combo-body > .jj-foco-btn.jj-foco-defensivo:not(:disabled) i { color: #4090d0; }
+.jj-foco-combo-body > .jj-foco-btn.jj-foco-defensivo:hover:not(:disabled) {
+  background: rgba(50, 100, 200, 0.16);
+  border-color: rgba(50, 100, 200, 0.5);
+}
+
+.jj-foco-combo-body > .jj-foco-btn.jj-foco-agressivo.active {
+  background: rgba(200, 70, 50, 0.18);
+  border-color: rgba(200, 70, 50, 0.55);
+  color: #f0b0a0;
+  animation: none;
+  box-shadow: inset 0 0 8px rgba(200, 60, 40, 0.25);
+}
+.jj-foco-combo-body > .jj-foco-btn.jj-foco-agressivo.active i { color: #e08060; }
+
+.jj-foco-combo-body > .jj-foco-btn.jj-foco-defensivo.active {
+  background: rgba(50, 100, 200, 0.18);
+  border-color: rgba(50, 100, 200, 0.55);
+  color: #a8c8f0;
+  animation: none;
+  box-shadow: inset 0 0 8px rgba(40, 80, 200, 0.25);
+}
+.jj-foco-combo-body > .jj-foco-btn.jj-foco-defensivo.active i { color: #70a8e8; }
+
+.jj-foco-combo-side { position: relative; }
+
+/* Com as pílulas dos botões agora tendo borda própria, o divisor central no corpo vira
+   ruído visual redundante — mantido só no cabeçalho, entre os rótulos "Agressivo"/"Defensivo". */
+.jj-foco-combo-body .jj-foco-combo-divider { display: none; }
+
+.jj-foco-combo-divider {
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, #24456e 25%, #24456e 75%, transparent);
+  margin: 0 4px;
+  align-self: stretch;
+}
+
+/* Cores específicas dos headers nas duas metades */
+.jj-foco-combo-agressivo .jj-foco-header i { color: #a04030; }
+.jj-foco-combo-agressivo .jj-foco-header span { color: #b07060; }
+.jj-foco-combo-defensivo .jj-foco-header i { color: #2a50a0; }
+.jj-foco-combo-defensivo .jj-foco-header span { color: #7090b0; }
+
+/* Pin button posicionado dentro de cada metade */
+.jj-foco-combo-side .jj-power-pin {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+/* ── Foco Defensivo (azul claro) — mantido para compatibilidade ── */
+filigree-box.jj-foco-defensivo-box {
+  --filigree-background-color: #06101a;
+  --filigree-border-color: #0e2a50;
+  --filigree-drop-shadow: drop-shadow(0 0 3px rgba(40, 80, 200, 0.25));
+  display: block;
+}
+
+.jj-foco-defensivo-box .jj-foco-header i { color: #2a50a0; }
+.jj-foco-defensivo-box .jj-foco-header span { color: #7090b0; }
+
+.jj-foco-btn.jj-foco-defensivo:hover:not(:disabled) { border-color: #204070; color: #4060a0; }
+.jj-foco-btn.jj-foco-defensivo:hover:not(:disabled) i { color: #2a4070; }
+.jj-foco-btn.jj-foco-defensivo.active {
+  background: #020810;
+  border-color: #2050a0;
+  color: #4080d0;
+  /* sem padding extra no ativo — o chip mantém o mesmo tamanho de sempre */
+  animation: jj-expdef-glow 2s ease-in-out infinite;
+}
+.jj-foco-btn.jj-foco-defensivo.active i { color: #2860b0; }
+
+/* ── Estágio de Foco (Ultimato — dourado) ── */
+.jj-nen-panel.jj-estagio-box {
+  background:
+    linear-gradient(155deg, rgba(240,192,96,0.08), transparent 45%),
+    linear-gradient(180deg, #14100a, #0c0906);
+  border-color: #4a3418;
+  box-shadow: inset 0 0 0 1px rgba(240,192,96,0.14), inset 0 0 20px rgba(0,0,0,0.5);
+}
+.jj-nen-panel.jj-estagio-box::before { color: rgba(240,192,96,0.10); }
+
+.jj-estagio-header { display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 5px 8px 3px; border: none; margin: 0; }
+.jj-estagio-header i { font-size: 9px; color: #c09030; animation: jj-estagio-pulse 2s ease-in-out infinite; }
+.jj-estagio-header span { color: #c0a060; font-size: 9px; letter-spacing: 0.07em;
+  text-transform: uppercase; font-weight: 700; }
+
+.jj-estagio-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px;
+  width: 100%;
+  background: #100804;
+  border: 1px solid #2a1a08;
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #604020;
+  cursor: pointer;
+  transition: all 140ms;
+}
+.jj-estagio-btn i { font-size: 13px; color: #402810; transition: color 140ms; }
+.jj-estagio-btn:hover { border-color: #604020; color: #a07030; }
+.jj-estagio-btn:hover i { color: #805020; }
+.jj-estagio-btn.active {
+  background: #1a0e04;
+  border-color: #c09030;
+  color: #f0c060;
+  animation: jj-estagio-glow 2s ease-in-out infinite;
+}
+.jj-estagio-btn.active i { color: #e0a040; }
+
+@keyframes jj-estagio-pulse {
+  0%, 100% { text-shadow: 0 0 4px rgba(240,192,96,0.3); }
+  50%       { text-shadow: 0 0 10px rgba(240,192,96,0.8), 0 0 18px rgba(220,170,60,0.4); }
+}
+@keyframes jj-estagio-glow {
+  0%, 100% { box-shadow: inset 0 0 5px rgba(240,192,96,0.15); }
+  50%       { box-shadow: inset 0 0 12px rgba(240,192,96,0.3), 0 0 8px rgba(220,170,60,0.25); }
+}
+
+/* ════════════════════════════════════════
+   PIN TOGGLE — Botões de poder
+   ════════════════════════════════════════ */
+.jj-power-pin {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 2;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #14142a;
+  border: 1px solid #3a3a60;
+  border-radius: 3px;
+  color: #6060a0;
+  font-size: 8px;
+  cursor: pointer;
+  padding: 0;
+  transition: all 140ms ease;
+}
+
+.jj-power-pin:hover {
+  border-color: #5a5a80;
+  color: #c0c0e0;
+  background: #1a1a3a;
+}
+
+.jj-power-pin.pinned {
+  background: rgba(120, 100, 200, 0.18);
+  border-color: #6f5fb0;
+  color: #b0a8ff;
+  transform: rotate(0deg);
+}
+
+.jj-power-pin:not(.pinned) i {
+  opacity: 0.5;
+  transform: rotate(45deg);
+}
+
+/* ── En (círculo — dourado) ── */
+.jj-nen-panel.jj-en-box { border-color: #3a3220; }
+.jj-nen-panel.jj-en-box.is-ativo {
+  border-color: rgba(224,192,96,0.55);
+  box-shadow: inset 0 0 0 1px rgba(224,192,96,0.18), inset 0 0 20px rgba(0,0,0,0.5),
+              0 0 9px rgba(184,115,51,0.18);
+}
+/* Cabeçalho no molde do Foco combo: divisória em gradiente que some nas pontas */
+.jj-en-title {
+  display: flex; align-items: center; gap: 6px;
+  margin: 0; padding: 6px 14px 4px;
+  border: none; position: relative;
+  font: 700 9px/1.2 var(--dnd5e-font-roboto, sans-serif);
+  letter-spacing: 0.07em; text-transform: uppercase; color: #c0a060;
+}
+/* Divisória ancorada no primeiro bloco após o título (status ou fileira de botões) */
+.jj-en-title + .jj-en-status,
+.jj-en-title + .jj-en-row { position: relative; }
+.jj-en-title + .jj-en-status::before,
+.jj-en-title + .jj-en-row::before {
+  content: "";
+  position: absolute; left: 12%; right: 12%; top: 0; height: 1px;
+  background: linear-gradient(to right, transparent, #6e5a24 25%, #6e5a24 75%, transparent);
+  pointer-events: none;
+}
+.jj-en-title .jj-en-kanji { font-size: 12px; color: #c09030; line-height: 1; }
+.jj-en-title .jj-en-live {
+  margin-left: auto; padding: 1px 6px;
+  border: 1px solid rgba(224,192,96,0.4); border-radius: 7px;
+  font-size: 8px; color: #f0dca0; letter-spacing: 0.08em;
+  animation: jj-estagio-pulse 2s ease-in-out infinite;
+}
+.jj-en-status { margin: 4px 0 0; padding-top: 6px; font-size: 10px; text-align: center; color: #b87333; }
+
+/* Botões no molde dos chips do Foco combo (radius 7, fundo sutil, uma linha) */
+.jj-en-row { display: flex; align-items: stretch; gap: 8px; padding: 6px 10px 4px; }
+.jj-en-btn {
+  flex: 1 1 0; min-width: 0;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 7px 8px;
+  background: rgba(200, 168, 75, 0.08);
+  border: 1px solid rgba(200, 168, 75, 0.3);
+  border-radius: 7px;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  white-space: nowrap;
+  color: #d0bc86; cursor: pointer; transition: all 140ms ease;
+}
+.jj-en-btn i { font-size: 12px; }
+.jj-en-btn:hover { background: rgba(184,115,51,0.16); border-color: rgba(184,115,51,0.5); color: #f0dca0; }
+.jj-en-btn.is-ghost { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.08); color: #8a8060; }
+.jj-en-btn.is-ghost:hover { background: rgba(184,115,51,0.08); border-color: rgba(184,115,51,0.3); color: #cbb87e; }
+.jj-en-btn.is-off { background: rgba(190,90,80,0.08); border-color: rgba(190,90,80,0.3); color: #d0a090; }
+.jj-en-btn.is-off:hover { background: rgba(190,90,80,0.16); border-color: rgba(190,90,80,0.5); color: #e0a89a; }
+
+.jj-nen-panel.jj-expdef-box,
+.jj-nen-panel.jj-estagio-box,
+filigree-box.jj-foco-agressivo-box,
+filigree-box.jj-foco-defensivo-box {
+  position: relative;
+}
+
+/* ════════════════════════════════════════
+   ABA EFFECTS — Seção de botões de poder
+   ════════════════════════════════════════ */
+.jj-power-buttons-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  padding: 8px 10px 4px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #1a1a28;
+}
+
+.jj-power-buttons-section .jj-habilidades-row { margin: 0; }
+
+/* Foco duo ocupa 2 colunas (quando houver espaço) pra não ficar apertado */
+.jj-power-buttons-section .jj-habilidades-row.jj-habilidades-duo {
+  grid-column: span 2;
+}
+
+/* ════════════════════════════════════════
+   SKILLS / SAVES / TOOLS
+   ════════════════════════════════════════ */
+.sheet-body .skills,
+.sheet-body .saves,
+.sheet-body .tools {
+  --filigree-background-color:        #0f0f1c;
+  --filigree-border-color:            #302860;
+  --proficiency-cycle-enabled-color:  var(--nen-primary-color, #c96c47);
+  --proficiency-cycle-disabled-color: var(--nen-primary-color, #2e2850);
+}
+
+.sheet-body .skills .header,
+.sheet-body .saves .header,
+.sheet-body .tools .header {
+  background: transparent !important;
+  border-bottom: 1px solid #1a1832;
+}
+
+.sheet-body .skills ul > li,
+.sheet-body .saves ul > li,
+.sheet-body .tools ul > li {
+  padding: 4px 6px;
+  border-radius: 3px;
+}
+
+.sheet-body .skills ul > li:hover,
+.sheet-body .saves ul > li:hover,
+.sheet-body .tools ul > li:hover {
+  background: rgba(60,35,100,0.10);
+}
+
+/* ════════════════════════════════════════
+   ABILITY SCORE HEX
+   ════════════════════════════════════════ */
+.ability-score {
+  width: 64px;
+  height: 72px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.ability-score::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(145deg, #0e0e1e, #0a0a14);
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  border: 1px solid rgba(120,150,255,.25);
+}
+
+.ability-score > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* ════════════════════════════════════════
+   ENERGY BAR (Aura) — versão Hunter (azul)
+   ════════════════════════════════════════ */
+
+  .energy-dice-bar::before {
+  background: linear-gradient(to right, #793cb6, #26024b) !important;
+  border-inline-end-color: #532a7c !important;
+}
+
+.cursed-energy-bar .progress::before {
+  background: linear-gradient(to right,
+    color-mix(in srgb, var(--nen-primary-color, #b77841) 78%, #1a1a1a) 0%,
+    color-mix(in srgb, var(--nen-primary-color, #ad856a) 78%, #1a1a1a) 100%) !important;
+  border-inline-end-color: var(--nen-primary-color, #b46c39) !important;
+}
+
+.cursed-energy-bar {
+  border: 1px solid rgb(159, 146, 117) !important;
+}
+
+.progress.hit-dice-bar::before {
+  background: linear-gradient(to right, #7b241c 0%, #c0392b 100%) !important;
+  border-inline-end-color: #a93226 !important;
+}
+
+.cursed-energy-bar {
+  display: flex !important;
+  align-items: center !important;
+  border: 1px solid var(--nen-primary-color, var(--dnd5e-color-gold)) !important;
+  height: 32px !important;
+  font-size: var(--font-size-16) !important;
+}
+
+/* ── Barra de Pontos de Vitalidade (substitui a Vida em Zetsu/aura esgotada) ── */
+.hc-vitality-bar .progress::before {
+  background: linear-gradient(to right, #1f8a70 0%, #2ec9a3 100%) !important;
+  border-inline-end-color: #28b48f !important;
+}
+.hc-vitality-bar { border: 1px solid #2ec9a3 !important; }
+
+/* ── Toggle de Aura / Zetsu (ícone de redemoinho + interruptor) ── */
+.hc-aura-toggle {
+  display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto;
+  width: auto; height: 16px; padding: 0; margin: 0; border: none; background: none; cursor: pointer;
+}
+.hc-aura-toggle i { font-size: 11px; color: #828892; transition: color .15s, filter .15s; }
+.hc-aura-toggle.is-on i { color: #e0902f; filter: drop-shadow(0 0 3px rgba(224,144,47,0.6)); }
+.hc-aura-switch {
+  position: relative; width: 26px; height: 14px; border-radius: 999px;
+  background: #34343d; border: 1px solid rgba(255,255,255,0.12);
+  transition: background .15s, border-color .15s;
+}
+.hc-aura-knob {
+  position: absolute; top: 1px; left: 1px; width: 10px; height: 10px; border-radius: 50%;
+  background: #9aa0ac; transition: left .15s, background .15s;
+}
+.hc-aura-toggle.is-on .hc-aura-switch { background: rgba(184,115,51,0.35); border-color: rgba(184,115,51,0.6); }
+.hc-aura-toggle.is-on .hc-aura-knob { left: 13px; background: #f4e4bf; }
+.hc-aura-toggle:hover:not(:disabled) .hc-aura-switch { border-color: rgba(255,255,255,0.3); }
+.hc-aura-toggle:disabled { opacity: .4; cursor: default; }
+
+/* ── Botão de gerar Aura manualmente (raio, sem toggle) ── */
+.hc-generate-energy-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: 0 0 auto; cursor: pointer; color: var(--category-color, #828892);
+  transition: filter .15s;
+}
+.hc-generate-energy-btn i { font-size: 11px; }
+.hc-generate-energy-btn:hover { filter: brightness(1.3) drop-shadow(0 0 4px var(--category-color, #828892)); }
+.hc-generate-energy-btn.glow i {
+  animation: hc-generate-energy-glow 1.8s ease-in-out infinite;
+}
+@keyframes hc-generate-energy-glow {
+  0%, 100% { filter: drop-shadow(0 0 1px var(--category-color, #828892)); opacity: .85; }
+  50% { filter: drop-shadow(0 0 6px var(--category-color, #828892)); opacity: 1; }
+}
+/* O botão não deve esticar a linha do título nem afastá-lo da barra. */
+.hc-hp-label { min-height: 0 !important; margin-bottom: 0 !important; line-height: 1.1 !important; align-items: flex-end !important; }
+.hc-hp-label .hc-aura-toggle { box-sizing: border-box; }
+/* Puxa a barra de Vida/Vitalidade pra perto do título. */
+.hc-hp-bars { margin-top: -1px !important; }
+
+/* ── Caminho (Objetivo × Meio) na aba Biografia — mesmo visual do OPRPG ── */
+.op-pers-field { display: flex; flex-direction: column; gap: 4px; }
+.op-pers-field > span { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #e3b53c; }
+.op-pers-field input, .op-pers-field select, .op-pers-field textarea {
+  background: rgba(20,16,26,0.6); border: 1px solid rgba(184,115,51,0.35); border-radius: 8px;
+  color: #e8e8e8; padding: 8px 10px; font-size: 13px;
+}
+.op-pers-field input:focus, .op-pers-field select:focus, .op-pers-field textarea:focus { border-color: #b87333; outline: none; }
+.op-pers-field select, .op-pers-field input { height: 40px; box-sizing: border-box; }
+.op-pers-field select { padding: 0 10px; line-height: 1.4; }
+.op-pers-field select option { background: #141824; color: #d7dce6; }
+
+.op-pers-sep { display: flex; align-items: center; gap: 12px; margin: 18px 0 12px; }
+.op-pers-sep::before, .op-pers-sep::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(184,115,51,0.5), transparent); }
+.op-pers-sep span { font-size: 15px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.08em; color: #e3b53c; white-space: nowrap; }
+.op-pers-sep span i { color: #b23a2b; margin-right: 6px; }
+
+.op-caminho { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
+.op-caminho-selects { display: flex; align-items: flex-end; gap: 12px; }
+.op-caminho-selects .op-pers-field { flex: 1; }
+.op-caminho-x { font-size: 20px; font-weight: 900; color: #8a8f9c; padding-bottom: 8px; }
+.op-caminho-result {
+  padding: 14px 16px; border-radius: 12px;
+  background: linear-gradient(160deg, rgba(184,115,51,0.1), rgba(20,16,26,0.6));
+  border: 1px solid #b87333;
+}
+.op-caminho-name { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 900; color: #f0ecda; margin-bottom: 8px; }
+.op-caminho-code {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 44px; height: 30px; padding: 0 8px;
+  border-radius: 8px; background: #b87333; color: #1a1206; font-size: 15px; font-weight: 900;
+}
+.op-caminho-desc { font-size: 12.5px; line-height: 1.55; color: #b8bcc6; margin: 0; }
+.op-caminho-hint { font-size: 12px; color: #8a8f9c; font-style: italic; margin: 0; }
+
+/* ── Seletor de Talentos & Defeitos na Biografia (visual do OP) ── */
+.op-sing-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 8px; }
+.op-sing-coltitle { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.op-sing-coltitle.sing, .op-sing-coltitle.sing i { color: #e3b53c; }
+.op-sing-coltitle.def, .op-sing-coltitle.def i { color: #b23a2b; }
+.op-sing-select {
+  width: 100%; height: 34px; padding: 0 10px; margin-bottom: 10px;
+  background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px; color: #b8bcc6; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.op-sing-select:hover, .op-sing-select:focus { border-color: #b87333; outline: none; }
+.op-sing-select option { background: #141824; color: #d7dce6; }
+.op-sing-selected {
+  display: flex; flex-direction: column; gap: 8px; min-height: 52px;
+  padding: 12px; border-radius: 10px; background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.06);
+}
+.op-sing-empty { font-size: 11px; color: #8a8f9c; font-style: italic; }
+.op-sing-card {
+  display: flex; width: 100%; align-items: center; gap: 8px; height: 32px; padding: 0 10px; cursor: pointer;
+  border-radius: 8px; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+  color: #b8bcc6; background: rgba(0,0,0,0.32); border: 1px solid rgba(255,255,255,0.12);
+  position: relative; transition: transform 130ms, filter 130ms, border-color 130ms;
+}
+.op-sing-card::before { content: ""; position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px; border-radius: 3px; }
+.op-sing-card:hover { transform: translateY(-1px); filter: brightness(1.1); }
+.op-sing-card.sing.selected { background: linear-gradient(135deg, rgba(227,181,60,0.16), rgba(0,0,0,0.34)); border-color: rgba(227,181,60,0.5); color: #e3b53c; }
+.op-sing-card.sing.selected::before { background: #b87333; }
+.op-sing-card.def.selected { background: linear-gradient(135deg, rgba(178,58,43,0.18), rgba(0,0,0,0.34)); border-color: rgba(178,58,43,0.5); color: #f0a59c; }
+.op-sing-card.def.selected::before { background: #b23a2b; }
+.op-sing-name { pointer-events: none; flex: 1 1 auto; text-align: left; padding-left: 8px; }
+.op-sing-card .op-sing-esp { font-size: 9px; font-weight: 900; line-height: 1; padding: 0 5px; height: 16px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background: rgba(0,0,0,0.45); color: inherit; opacity: 0.85; pointer-events: none; }
+.op-sing-card .op-sing-rm { font-size: 10px; width: 19px; height: 19px; border-radius: 50%; opacity: 0.5; display: inline-flex; align-items: center; justify-content: center; transition: all 120ms; }
+.op-sing-card:hover .op-sing-rm { opacity: 1; background: rgba(178,58,43,0.22); color: #b23a2b; }
+/* ══ PERÍCIAS NO TOPO DA ABA DETALHES — full-width, 2 colunas por atributo ══
+   Classe própria no container (.jj-details-tab) pra não depender dos seletores do core.
+   O <ul> continua FILHO DIRETO da filigree (o CSS de item do dnd5e exige isso) e as
+   2 colunas são CSS multicol, com quebra forçada na marca .col-break vinda do prep. */
+.jj-details-tab {
+  flex-wrap: wrap;
+  /* container NOMEADO: o core marca a própria .saves como container (inline-size) e uma
+     query sem nome pode resolver contra o container errado — com nome não tem ambiguidade */
+  container: jj-details / inline-size;
+}
+
+/* Topo em grid nomeado:  Salvaguardas | Categoria | Espécie
+                          Salvaguardas | Caminho   | Origem  */
+.jj-details-tab > .jj-details-top {
+  flex: 1 1 100%;
+  width: 100%;
+  grid-column: 1 / -1;   /* cobre o caso do core usar grid na aba */
+  box-sizing: border-box;
+  display: grid;
+  /* minmax(0, …) em TODAS as colunas: nenhuma pode ser forçada pelo conteúdo a invadir
+     a vizinha — no pior caso o excesso é recortado dentro da própria caixa */
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: 1fr 1fr;   /* duas linhas de MESMA altura */
+  grid-template-areas:
+    "saves categoria especie"
+    "saves caminho   origem";
+  gap: 6px 12px;
+  margin-bottom: 2px;   /* menos espaço antes das perícias */
+  align-items: stretch;
+}
+/* Sem Categoria (classe) nem Caminho (subclasse): colapsa a coluna do meio e
+   realoca Espécie/Origem pra ela, eliminando o espaço vazio. */
+.jj-details-top.no-middle {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto auto;   /* cada linha tem só a altura do conteúdo */
+  grid-template-areas:
+    "saves saves"
+    "especie origem";
+}
+.jj-details-top.no-middle > .jj-area-categoria,
+.jj-details-top.no-middle > .jj-area-caminho { display: none; }
+.jj-details-top > .jj-area-saves {
+  grid-area: saves;
+  /* A BORDA ABRAÇA O CONTEÚDO: sem height 100%/stretch — o grid pode ter linhas mais
+     altas (outra célula manda), mas a caixa nunca mostra vão interno. */
+  height: auto !important;
+  align-self: start;
+  margin: 0;
+  /* core: .saves { min-width: var(--skills-col-width) } (0,5,0) — ERA a invasão das
+     pílulas: a caixa não encolhia abaixo da largura da coluna de perícias. */
+  min-width: 0 !important;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+/* ul compacto: grid 2-colunas com respiro fixo entre as linhas (sem esticar).
+   !important nos paddings/gap: o core (.saves > ul, 0,5,1) impõe padding-bottom 12px
+   e gap ~9px — medidos no DevTools — que criavam o vão no rodapé da caixa. */
+.jj-details-top > .jj-area-saves > ul {
+  flex: 0 0 auto !important;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  align-content: start !important;
+  align-items: center;
+  position: relative;              /* âncora da divisória do header */
+  padding: 6px 10px 0 !important;
+  gap: 2px 8px !important;
+  margin: 0 !important;
+}
+.jj-details-top > .jj-area-categoria { grid-area: categoria; }
+.jj-details-top > .jj-area-caminho   { grid-area: caminho; }
+.jj-details-top > .jj-area-especie   { grid-area: especie; }
+.jj-details-top > .jj-area-origem    { grid-area: origem; }
+/* cada célula tem 1 pílula — box-model idêntico nas 4 (a classe .classes do core
+   trazia padding/margem próprios e desalinhava as linhas).
+   !important de propósito: o core fixa height:50px, max-width:280px e width:240px
+   (.classes .class) — sem isso as pílulas nunca preenchem as células por igual. */
+/* !important contra o core: [data-tab="details"] .pills-lg força flex-direction: COLUMN
+   (0,5,0) e .classes.pills-lg põe justify-content: center — que em coluna vira
+   centralização VERTICAL só na Categoria/Caminho (o "espaço acima" delas). */
+.jj-details-top > .pills-lg {
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;       /* pílula centralizada na célula — igual nas 4 */
+  justify-content: flex-start !important;
+}
+.jj-details-top > .pills-lg > .pill-lg {
+  flex: 1 1 auto;
+  width: 100% !important;
+  max-width: none !important;
+  /* Preenche a linha do grid — as linhas são 1fr 1fr, então as 4 pílulas continuam
+     SEMPRE iguais entre si, agora sem folga interna. 54px é o piso. */
+  height: 100% !important;
+  min-height: 54px !important;
+  max-height: none !important;
+  margin: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.jj-details-top > .pills-lg.classes { flex-wrap: nowrap; justify-content: stretch; }
+.jj-details-top > .pills-lg.classes > .class.pill-lg { width: 100% !important; }
+
+/* A raiz da diferença de ALTURA: o core usa ícone ~40px nas pílulas de espécie/origem
+   e ~32px nas de classe — o conteúdo mais alto infla a caixa. Ícone igual nas 4. */
+.jj-details-top .pill-lg .gold-icon,
+.jj-details-top .pill-lg img.gold-icon {
+  width: 32px !important;
+  height: 32px !important;
+  flex: 0 0 32px;
+}
+/* corrente de altura completa, pro stretch valer em qualquer caso */
+.jj-details-top > .pills-lg { height: 100%; }
+
+/* Janela estreita: Salvaguardas em cima, pílulas em 2×2 — nada se sobrepõe.
+   Gatilho em 760px: dispara ANTES das 3 colunas apertarem a ponto de colidir. */
+@container jj-details (max-width: 760px) {
+  .jj-details-tab > .jj-details-top {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "saves     saves"
+      "categoria especie"
+      "caminho   origem";
+  }
+  /* Sem classe/caminho: mantém Espécie + Antecedente lado a lado mesmo estreito. */
+  .jj-details-tab > .jj-details-top.no-middle {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "saves   saves"
+      "especie origem";
+  }
+  .jj-details-top > .jj-area-saves { height: auto; }
+  /* empilhado: o ul abraça o conteúdo (sem flex:1/space-evenly esticando) — some o vão no rodapé */
+  .jj-details-top > .jj-area-saves > ul {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    align-content: start !important;
+    grid-auto-rows: min-content;
+  }
+}
+
+/* Perícias — abaixo do topo, largura inteira */
+.jj-details-tab > .jj-skills-top {
+  flex: 1 1 100%;
+  width: 100%;
+  grid-column: 1 / -1;
+  box-sizing: border-box;
+}
+.jj-details-tab > .jj-skills-top > ul {
+  display: block;       /* multicol precisa de fluxo em bloco (o core usa flex na ul) */
+  columns: 2;
+  column-gap: 26px;
+  column-rule: 1px solid rgba(200, 168, 75, 0.14);
+  margin: 0;
+  padding: 0;
+}
+.jj-details-tab > .jj-skills-top > ul > li {
+  break-inside: avoid;  /* nunca corta uma perícia ao meio */
+}
+.jj-details-tab > .jj-skills-top > ul > li.skill-separator.col-break {
+  break-before: column; /* o grupo marcado abre a 2ª coluna (FOR/AGI/ESP | SAB/PRE) */
+}
+/* Alinhamento do topo das colunas (medido no DevTools): o core dá margin-top 8px a
+   todos os separadores — que RENDERIZA inclusive na quebra de coluna (Sabedoria) —
+   mas zera no :first-child, deixando só a Força colada. Devolve os 8px a ela.
+   !important: a regra do core tem especificidade (0,6,1) e atropela qualquer seletor nosso. */
+.jj-details-tab > .jj-skills-top > ul > li.skill-separator:first-child {
+  margin-top: 8px !important;
+}
+/* Ajuste fino do ritmo da coluna esquerda: Agilidade e Espírito com respiro maior */
+.jj-details-tab > .jj-skills-top > ul > li.skill-separator.sep-dex {
+  margin-top: 24px !important;
+}
+.jj-details-tab > .jj-skills-top > ul > li.skill-separator.sep-int {
+  margin-top: 23px !important;
+}
+/* O core zera a borda só no :last-child do <ul> inteiro (Provocação, fim real da
+   lista) — mas o multicol quebra a lista em 2 colunas visuais, e Sorte (fim da
+   1ª coluna) fica com a linha enquanto Provocação (fim da 2ª) não. Devolve nela. */
+.jj-details-tab > .jj-skills-top > ul > li:last-child {
+  border-bottom: var(--dnd5e-border-dotted) !important;
+}
+
+/* ══ ABA DETALHES NO TEMA PLACA NEN — Salvaguardas 守 · Perícias 技 · pílulas chanfradas ══ */
+
+/* Headers das placas (a base .jj-nen-panel já dá chanfro/fio/kanji) */
+.jj-nen-panel.jj-area-saves > h3,
+.jj-nen-panel.jj-skills-top > h3 {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  margin: 0; padding: 6px 10px 5px; border: none;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.09em; text-transform: uppercase;
+  color: #b89868;
+}
+.jj-nen-panel.jj-area-saves > h3 i,
+.jj-nen-panel.jj-skills-top > h3 i { font-size: 10px; color: #c09030; }
+
+/* Divisória-gradiente sob o header — ancorada no topo do <ul> (pseudo em h3 não renderiza) */
+.jj-nen-panel.jj-area-saves > ul,
+.jj-nen-panel.jj-skills-top > ul { position: relative; padding-top: 7px; }
+.jj-nen-panel.jj-area-saves > ul::before,
+.jj-nen-panel.jj-skills-top > ul::before {
+  content: "";
+  position: absolute; top: 0; left: 12%; right: 12%; height: 1px;
+  background: linear-gradient(to right, transparent, #6e5a24 25%, #6e5a24 75%, transparent);
+  pointer-events: none;
+}
+
+/* Respiro interno das placas grandes */
+.jj-nen-panel.jj-skills-top { padding: 6px 14px 12px; }
+.jj-nen-panel.jj-area-saves { padding: 5px 10px 6px; }
+
+/* O kanji marca-d'água fica maior nas placas grandes */
+.jj-nen-panel.jj-skills-top::before { font-size: 72px; right: 2px; bottom: -22px; }
+
+/* Pílulas (Categoria/Caminho/Espécie/Origem) — chanfro + fio dourado, mantendo a arte */
+.jj-details-top .pill-lg {
+  border: 1px solid #3a3220;
+  border-radius: 0;
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
+                     calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+  box-shadow: inset 0 0 0 1px rgba(184,115,51,0.10), inset 0 0 16px rgba(0,0,0,0.45);
+}
+.jj-details-top .pill-lg .subtitle { color: #9a8c60; }
+/* vazias (Adicionar X): tracejado dourado discreto */
+.jj-details-top .pill-lg.empty {
+  border-style: dashed;
+  border-color: rgba(184,115,51,0.3);
+  color: #8a7c54;
+}
+.jj-details-top .pill-lg.empty:hover { border-color: rgba(224,192,96,0.6); color: #cbb87e; }
+/* número de nível da Categoria em dourado */
+.jj-details-top .class.pill-lg .level { color: #e0c060; }
+
+/* ═══════════════ RESISTÊNCIAS & VULNERABILIDADES (PF2e) ═══════════════ */
+/* Bloco único, 3 colunas. Cada linha = um tipo de dano com barra central +
+   hexágono mostrando o valor líquido:
+   > 0 → barra verde à direita (Resistência)
+   < 0 → barra vermelha à esquerda (Vulnerabilidade)
+   = 0 → hexágono 0, sem barra. */
+.jj-details-tab > .jj-resist {
+  flex: 1 1 100%;
+  width: 100%;
+  grid-column: 1 / -1;
+  box-sizing: border-box;
+  margin-top: 8px;
+}
+.jj-resist > h3 {
+  position: relative;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  margin: 0; padding: 6px 10px 5px; border: none;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.09em; text-transform: uppercase;
+  color: #b89868;
+}
+.jj-resist > h3 i { font-size: 10px; color: #c09030; }
+.jj-resist-cogs {
+  position: absolute;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.jj-resist-cog {
+  color: #8a7c54;
+  font-size: 10px;
+  opacity: 0.7;
+}
+.jj-resist-cog:hover { opacity: 1; }
+.jj-resist-cog[data-config="resistance"]:hover { color: #6fd0a0; }
+.jj-resist-cog[data-config="weakness"]:hover { color: #e87b75; }
+
+.jj-resist-body {
+  padding: 6px 10px 8px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px 18px;
+}
+.jj-resist-col {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Linha de um tipo de dano */
+.jj-resist-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 0;
+  cursor: default;
+}
+.jj-resist-name {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #b8a878;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* A barra: linha horizontal com o hexágono no CENTRO. A faixa verde/vermelha
+   cresce a partir do centro (pra direita se res, pra esquerda se weak). */
+.jj-resist-bar {
+  position: relative;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  /* trilho de fundo (a "linha") */
+  background: linear-gradient(to bottom,
+    transparent 0%, transparent 40%,
+    rgba(184,115,51,0.22) 40%, rgba(184,115,51,0.22) 60%,
+    transparent 60%, transparent 100%);
+}
+
+/* preenchimento da barra: posiciona do centro p/ fora */
+.jj-resist-fill {
+  position: absolute;
+  top: 40%;
+  height: 20%;
+  left: 50%;            /* centro por padrão */
+  width: 0;             /* sem barra se neutro */
+  border-radius: 1px;
+}
+.jj-resist-fill.res {
+  background: #4caf80;
+}
+.jj-resist-fill.weak {
+  background: #d6453f;
+  right: 50%;           /* cresce do centro pra esquerda */
+  left: auto;
+}
+.jj-resist-fill.neutral { display: none; }
+
+/* Hexágono central com o valor. clip-path desenha o hexágono apontando p/ os lados. */
+.jj-resist-hex {
+  position: relative;
+  z-index: 1;
+  margin: 0 auto;
+  width: 22px;
+  height: 19px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  background: rgba(20, 18, 12, 0.92);
+  color: #cbb87e;
+  border: 1px solid rgba(200, 168, 75, 0.45);
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+}
+.jj-resist-row.res .jj-resist-hex {
+  background: rgba(76, 175, 128, 0.92);
+  color: #06240f;
+  border-color: #6fd0a0;
+}
+.jj-resist-row.weak .jj-resist-hex {
+  background: rgba(214, 69, 63, 0.92);
+  color: #2a0604;
+  border-color: #e87b75;
+}
+
+
+/* ═══════════════ CONFIG DE RESISTÊNCIAS/VULNERABILIDADES ═══════════════ */
+.pf2e-trait-config.dnd5e2 {
+  padding: 4px;
+}
+.pf2e-trait-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.pf2e-trait-config .pf2e-trait-col {
+  padding: 8px; border-radius: 6px;
+  border: 1px solid rgba(45,138,95,0.15);
+  background: rgba(0,0,0,0.2);
+}
+.pf2e-trait-config .pf2e-trait-list {
+  list-style: none; margin: 0; padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 4px;
+}
+.pf2e-trait-config .pf2e-trait-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 8px; border-radius: 5px;
+  background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06);
+}
+.pf2e-trait-config .damage-icon {
+  width: 20px; height: 20px; flex: 0 0 auto;
+  border-radius: 50%; padding: 1px;
+}
+.pf2e-trait-config .damage-label {
+  flex: 1 1 auto; font-size: 12px; font-weight: 600; color: var(--jj-text-main, #c8d8c8);
+}
+.pf2e-trait-config .pf2e-trait-value {
+  flex: 0 0 auto; width: 50px; text-align: center;
+  background: rgba(0,0,0,0.4); border: 1px solid rgba(184,115,51,0.25);
+  border-radius: 4px; padding: 2px 4px; color: #f2e8ca;
+  font-size: 12px; font-weight: 700;
+}
+.pf2e-trait-config .pf2e-trait-value:focus {
+  outline: none; border-color: #b87333; box-shadow: 0 0 6px rgba(184,115,51,0.2);
+}
