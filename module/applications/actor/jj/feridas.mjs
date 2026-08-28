@@ -6,7 +6,8 @@
  * - Crítico perfeito (nat 20): 50% do dano sofrido vira Ferida.
  * - Dano de queda: 100% vira Ferida (marcado manualmente pelo narrador).
  * - Cada Ferida reduz o PV máximo em 1 (aplicado em prepareHitPoints).
- * - Descanso longo cura todas as feridas.
+ * - Com Portão da Cura (Corpo nv.3+), descanso longo cura metade das feridas.
+ * - Curar 20 feridas consome dados de vida = nível de cultivo (botão na sidebar).
  *
  * Acúmulo: para personagens, usa o hook hunterDamageApplied (que passa crit + amount).
  * Para NPCs, usa dnd5e.applyDamage (pós-aplicação).

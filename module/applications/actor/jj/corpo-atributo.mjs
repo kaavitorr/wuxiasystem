@@ -54,8 +54,9 @@ export async function chooseBodyAttribute(actor, level, path = "body") {
 
   if ( !escolha ) return false;
 
-  // Aplica o +1 no atributo escolhido.
-  const currentValue = actorAbilities[escolha]?.value ?? 10;
+  // Aplica o +1 no atributo escolhido (relê o valor atual — pode ter mudado
+  // durante o diálogo aberto).
+  const currentValue = actor.system.abilities?.[escolha]?.value ?? 10;
   await actor.update({ [`system.abilities.${escolha}.value`]: currentValue + 1 });
 
   ChatMessage.create({
