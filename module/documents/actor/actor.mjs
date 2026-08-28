@@ -3466,7 +3466,7 @@ async _preUpdate(changed, options, user) {
       foundry.utils.setProperty(options, "dnd5e.originalExhaustion", this.system.attributes.exhaustion);
     }
 
-    // Avisar no chat quando PA Gerada for alterada manualmente
+    // Avisar no chat quando o Qi Gerado for alterado manualmente
     const novaGerada = foundry.utils.getProperty(changed, "system.energy.generated");
     if ( Number.isFinite(novaGerada) && !options.isEnergySystem && !options.isRest && this.type === "character" ) {
       const antiga = this.system.energy.generated;
@@ -3475,13 +3475,13 @@ async _preUpdate(changed, options, user) {
         const sinal = delta > 0 ? `+${delta}` : `${delta}`;
         ChatMessage.create({
           speaker: ChatMessage.getSpeaker({ actor: this }),
-          content: `⚡ <b>${this.name}</b> alterou a PA Gerada manualmente: ${antiga} → ${novaGerada} (${sinal})`
+          content: `⚡ <b>${this.name}</b> alterou o Qi Gerado manualmente: ${antiga} → ${novaGerada} (${sinal})`
         });
       }
     }
 
-    // Avisar no chat quando a AURA TOTAL for alterada manualmente (custos de técnica,
-    // descanso e dados de energia passam com isEnergySystem/isRest e não avisam)
+    // Avisar no chat quando os Pontos de Qi forem alterados manualmente (custos de
+    // técnica, descanso e dados de energia passam com isEnergySystem/isRest e não avisam)
     const novoTotal = foundry.utils.getProperty(changed, "system.energy.total");
     if ( Number.isFinite(novoTotal) && !options.isEnergySystem && !options.isRest && this.type === "character" ) {
       const antigo = this.system.energy.total;
@@ -3490,7 +3490,7 @@ async _preUpdate(changed, options, user) {
         const sinal = delta > 0 ? `+${delta}` : `${delta}`;
         ChatMessage.create({
           speaker: ChatMessage.getSpeaker({ actor: this }),
-          content: `🌀 <b>${this.name}</b> alterou a Aura Total manualmente: ${antigo} → ${novoTotal} (${sinal})`
+          content: `🌀 <b>${this.name}</b> alterou os Pontos de Qi manualmente: ${antigo} → ${novoTotal} (${sinal})`
         });
       }
     }

@@ -5690,7 +5690,8 @@ async _syncTrainingEffect(trainingId, rank) {
     if ( game.dice3d ) game.dice3d.showForRoll(roll, game.user, true);
     await roll.toMessage({
       speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-      flavor: `Controle de Energia (CON)<br><strong>${def.label}</strong> — CD ${currentDC}`
+      flavor: `Controle de Energia (CON)<br><strong>${def.label}</strong> — CD ${currentDC}`,
+      rollMode: game.settings.get("core", "rollMode")
     });
 
     if ( roll.total >= currentDC ) {
