@@ -90,6 +90,11 @@
     <div class="cult-essence-track">
       <div class="cult-essence-fill {{#if cultivation.essFull}}full{{/if}}" style="width: {{ cultivation.essencePct }}%;"></div>
     </div>
+    <p class="cult-essence-cap" data-tooltip="Zona de Qi: {{#if (eq cultivation.zoneLimit Infinity)}}sem limite{{else}}{{ cultivation.zoneLimit }} PEQ/dia{{/if}} · Manual: {{#if cultivation.manualAbsorb}}{{ cultivation.manualAbsorb }}{{else}}sem limite{{/if}}">
+      <i class="fas fa-yin-yang" inert></i>
+      Absorção diária:
+      {{#if (eq cultivation.dailyEssenceCap Infinity)}}<strong>sem limite</strong>{{else}}<strong>{{ cultivation.dailyEssenceCap }}</strong> PEQ/dia{{/if}}
+    </p>
     {{#if cultivation.essGoalIsNext}}
     <p class="cult-essence-hint">3º estágio: junte <strong>{{ dnd5e-numberFormat cultivation.essMax }}</strong> de Essência (o custo do próximo Rank) para tentar o <strong>Rompimento</strong>.</p>
     {{else}}

@@ -333,6 +333,23 @@ export default class CharacterActorSheet extends BaseActorSheet {
     const qiVal = energy.total ?? 0;
     const qiMax = energy.max ?? 0;
 
+    // ── Wuxia Legacy: Zona de Qi — cap diário de absorção de Essência ────
+    // O ganho diário de Essência = min(limite da zona, absorção do Manual).
+    // Zona: setting mundial qiZone (base ×10 com Veia, ×2 com Seita).
+    // Manual: flag manualEssencePerDay (aba Manual de Cultivo).
+    const QI_ZONE_BASES = {
+      quaseInexistente: 1, escasso: 5, inferior: 10, mediano: 15,
+      altaQualidade: 25, denso: 40, superior: 80, perfeito: 120, supremo: Infinity
+    };
+    const qiZone = game.settings.get("wuxia-system", "qiZone") ?? {};
+    let zoneLimit = QI_ZONE_BASES[qiZone.level ?? "mediano"] ?? 15;
+    if ( zoneLimit !== Infinity ) {
+      if ( qiZone.veiaEspiritual ) zoneLimit *= 10;
+      if ( qiZone.seita ) zoneLimit *= 2;
+    }
+    const manualAbsorb = this.actor.getFlag("wuxia-system", "manualEssencePerDay") ?? Infinity;
+    const dailyEssenceCap = Math.min(zoneLimit, manualAbsorb);
+
     context.cultivation = {
       rank, stage, stageMax: STAGES_POR_RANK,
       stagePips: Array.from({ length: STAGES_POR_RANK }, (_, i) => ({ n: i + 1, filled: (i + 1) <= stage })),
@@ -341,6 +358,9 @@ export default class CharacterActorSheet extends BaseActorSheet {
       essGoalIsNext: atStageMax && !atRankMax,
       essencePct: essGoal > 0 ? Math.clamp(Math.round((essence / essGoal) * 100), 0, 100) : 0,
       essFull, pt,
+      dailyEssenceCap,
+      zoneLimit,
+      manualAbsorb: manualAbsorb === Infinity ? null : manualAbsorb,
       illumination: Math.max(0, c.illumination ?? 0),
       // Iluminação Profunda: 3 PI p/ avançar de Rank automaticamente (sem rolagem).
       // Disponível quando pode romper (3º estágio + essência cheia + tem 3 PI).

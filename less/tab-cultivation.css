@@ -580,3 +580,12 @@
 .cult-path-hero-info {
   display: flex; flex-direction: column; gap: 6px;
 }
+
+/* Indicador de absorção diária de Essência (Zona de Qi) */
+.cult-essence-cap {
+  display: flex; align-items: center; gap: 5px;
+  margin: 4px 0 2px; font-size: 11px; color: #2d8a5f;
+  cursor: help;
+}
+.cult-essence-cap i { font-size: 10px; opacity: 0.7; }
+.cult-essence-cap strong { color: #6fd0a4; font-weight: 700; }

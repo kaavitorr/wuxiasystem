@@ -448,6 +448,17 @@ export function registerSystemSettings() {
     onChange: value => { CONFIG.time.roundTime = Math.max(0, Number(value) || 6); }
   });
 
+  // ── Wuxia Legacy: Zona de Qi da Região ────────────────────────────────
+  // Define quanto PEQ (Pontos de Essência de Qi) por dia a região permite.
+  // "Seita" dobra o limite; "Veia Espiritual" multiplica a base por 10.
+  game.settings.register("wuxia-system", "qiZone", {
+    name: "Zona de Qi da Região",
+    scope: "world",
+    config: false,
+    type: Object,
+    default: { level: "mediano", seita: false, veiaEspiritual: false }
+  });
+
   // Marca se o reparo único de Vida (advancement de Pontos de Vida dos personagens criados
   // antes do fix) já rodou. Ver dnd5e.mjs → _repairCharacterHP / game.hunterRepairHP.
   game.settings.register("wuxia-system", "hpAdvancementRepairDone", {

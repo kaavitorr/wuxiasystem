@@ -473,6 +473,26 @@ export default class CalendarHUD extends BaseCalendarHUD {
       return s > 1 ? `≈ ${num}× o tempo real` : `≈ ${num}× mais devagar que o real`;
     };
 
+    // ── Wuxia Legacy: Zona de Qi da Região ──────────────────────────────
+    const QI_ZONES = [
+      { id: "quaseInexistente", label: "Qi Quase Inexistente", base: 1 },
+      { id: "escasso",          label: "Qi Escasso",           base: 5 },
+      { id: "inferior",         label: "Qi Inferior",          base: 10 },
+      { id: "mediano",          label: "Qi Mediano",           base: 15 },
+      { id: "altaQualidade",    label: "Qi de Alta Qualidade", base: 25 },
+      { id: "denso",            label: "Qi Denso",             base: 40 },
+      { id: "superior",         label: "Qi Superior",          base: 80 },
+      { id: "perfeito",         label: "Qi Perfeito",          base: 120 },
+      { id: "supremo",          label: "Qi Supremo",           base: Infinity }
+    ];
+    const qiZone = game.settings.get("wuxia-system", "qiZone") ?? {};
+    const zoneSel = qiZone.level ?? "mediano";
+    const seita = !!qiZone.seita;
+    const veia = !!qiZone.veiaEspiritual;
+    const zoneOptions = QI_ZONES.map(z =>
+      `<option value="${z.id}" ${z.id === zoneSel ? "selected" : ""}>${z.label}${z.base === Infinity ? " (sem limite)" : ` (${z.base} PEQ/dia)`}</option>`
+    ).join("");
+
     const rate = game.settings.get("wuxia-system", "calendarAutoTimeRate") ?? {};
     const roundSec = Number(game.settings.get("wuxia-system", "calendarCombatRoundSeconds")) || 6;
     const combat = toAmountUnit(roundSec);
@@ -500,7 +520,30 @@ export default class CalendarHUD extends BaseCalendarHUD {
           </label>
           <div class="hxh-time-speed" style="font-size:12px; color:#9fd39f;">${fmtSpeed(oocAmount * UNIT_SEC[oocUnit], oocInterval)}</div>
         </section>
+        <section style="display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px;">
+          <b style="color:#2d8a5f;"><i class="fa-solid fa-yin-yang" inert></i> Zona de Qi da Região</b>
+          <select name="qiZone" style="font-size:13px;">${zoneOptions}</select>
+          <div style="display:flex; gap:16px; font-size:13px;">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="checkbox" name="qiSeita" ${seita ? "checked" : ""}> Seita <small style="opacity:.6;">(dobra o limite)</small>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="checkbox" name="qiVeia" ${veia ? "checked" : ""}> Veia Espiritual <small style="opacity:.6;">(base ×10)</small>
+            </label>
+          </div>
+          <div class="hxh-qi-limit" style="font-size:12px; color:#8ad0a0;"></div>
+        </section>
       </div>`;
+
+    // Calcula o limite de PEQ/dia da zona com os modificadores.
+    const calcZoneLimit = (zoneId, seita, veia) => {
+      const zone = QI_ZONES.find(z => z.id === zoneId) ?? QI_ZONES[3];
+      if ( zone.base === Infinity ) return Infinity;
+      let limit = zone.base;
+      if ( veia ) limit *= 10;
+      if ( seita ) limit *= 2;
+      return limit;
+    };
 
     const result = await foundry.applications.api.DialogV2.wait({
       window: { title: "Configurar Tempo", icon: "fa-solid fa-hourglass-half" },
@@ -508,14 +551,28 @@ export default class CalendarHUD extends BaseCalendarHUD {
       render: (event, dialog) => {
         const root = dialog.element;
         const speedEl = root.querySelector(".hxh-time-speed");
+        const qiLimitEl = root.querySelector(".hxh-qi-limit");
         const update = () => {
           const a = Number(root.querySelector("[name=oocAmount]")?.value) || 0;
           const u = root.querySelector("[name=oocUnit]")?.value || "minute";
           const iv = Number(root.querySelector("[name=oocInterval]")?.value) || 1;
           if ( speedEl ) speedEl.textContent = fmtSpeed(a * (UNIT_SEC[u] || 1), iv);
         };
+        const updateQi = () => {
+          if ( !qiLimitEl ) return;
+          const z = root.querySelector("[name=qiZone]")?.value ?? "mediano";
+          const s = root.querySelector("[name=qiSeita]")?.checked ?? false;
+          const v = root.querySelector("[name=qiVeia]")?.checked ?? false;
+          const limit = calcZoneLimit(z, s, v);
+          qiLimitEl.textContent = limit === Infinity
+            ? "Limite de PEQ/dia: SEM LIMITE"
+            : `Limite de PEQ/dia: ${limit}`;
+        };
         root.querySelectorAll("[name=oocAmount], [name=oocUnit], [name=oocInterval]")
           .forEach(el => el.addEventListener("input", update));
+        root.querySelectorAll("[name=qiZone], [name=qiSeita], [name=qiVeia]")
+          .forEach(el => el.addEventListener("change", updateQi));
+        updateQi();
       },
       buttons: [
         {
@@ -530,6 +587,11 @@ export default class CalendarHUD extends BaseCalendarHUD {
                 intervalSeconds: Math.max(1, val("[name=oocInterval]") || 10),
                 amount: Math.max(0, val("[name=oocAmount]")),
                 unit: root.querySelector("[name=oocUnit]").value
+              },
+              qiZone: {
+                level: root.querySelector("[name=qiZone]")?.value ?? "mediano",
+                seita: root.querySelector("[name=qiSeita]")?.checked ?? false,
+                veiaEspiritual: root.querySelector("[name=qiVeia]")?.checked ?? false
               }
             };
           }
@@ -543,7 +605,8 @@ export default class CalendarHUD extends BaseCalendarHUD {
 
     await game.settings.set("wuxia-system", "calendarCombatRoundSeconds", Math.max(0, Math.round(result.roundSeconds)));
     await game.settings.set("wuxia-system", "calendarAutoTimeRate", result.rate);
-    ui.notifications.info("Configuração de tempo salva.");
+    await game.settings.set("wuxia-system", "qiZone", result.qiZone);
+    ui.notifications.info("Configuração de tempo e Zona de Qi salva.");
   }
 
   /* -------------------------------------------- */
