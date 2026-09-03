@@ -413,7 +413,9 @@ export default class CalendarHUD extends BaseCalendarHUD {
             actorId: dialog.element.querySelector("#jj-party-select")?.value || null
           })
         },
-        { action: "cancel", label: "Cancelar", icon: "fa-solid fa-xmark" }
+        // callback null: sem ele, "Cancelar" resolvia com a string "cancel"
+        // (truthy) e desvinculava o grupo sem querer.
+        { action: "cancel", label: "Cancelar", icon: "fa-solid fa-xmark", callback: () => null }
       ],
       rejectClose: false,
       close: () => null
@@ -511,7 +513,8 @@ export default class CalendarHUD extends BaseCalendarHUD {
           <div class="hxh-time-speed" style="font-size:12px; color:#9fd39f;">${fmtSpeed(oocAmount * UNIT_SEC[oocUnit], oocInterval)}</div>
         </section>
         <section style="display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px;">
-          <b style="color:#2d8a5f;"><i class="fa-solid fa-yin-yang" inert></i> Zona de Qi da Região</b>
+          <b style="color:#2d8a5f;"><i class="fa-solid fa-yin-yang" inert></i> Zona de Qi da Região
+            <small style="opacity:.6; font-weight:400;">(salva ao alterar)</small></b>
           <select name="qiZone" style="font-size:13px;">${zoneOptions}</select>
           <div style="display:flex; gap:16px; font-size:13px;">
             <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
@@ -551,6 +554,18 @@ export default class CalendarHUD extends BaseCalendarHUD {
           qiLimitEl.textContent = limit === Infinity
             ? "Limite de PEQ/dia: SEM LIMITE"
             : `Limite de PEQ/dia: ${limit}`;
+          // Zona de Qi é salva IMEDIATAMENTE ao alterar (setting mundial) — não
+          // depende de Salvar/Cancelar. No primeiro updateQi (render) os valores
+          // batem com os salvos e nada é gravado.
+          const current = game.settings.get("wuxia-system", "qiZone") ?? {};
+          if ( ((current.level ?? "mediano") !== z) || (!!current.seita !== s) || (!!current.veiaEspiritual !== v) ) {
+            game.settings.set("wuxia-system", "qiZone", { level: z, seita: s, veiaEspiritual: v })
+              .then(() => ui.notifications.info(`Zona de Qi salva: ${limit === Infinity ? "sem limite" : limit + " PEQ/dia"}.`))
+              .catch(err => {
+                console.error("Wuxia | falha ao salvar a Zona de Qi:", err);
+                ui.notifications.error("Falha ao salvar a Zona de Qi — detalhes no console (F12).");
+              });
+          }
         };
         root.querySelectorAll("[name=oocAmount], [name=oocUnit], [name=oocInterval]")
           .forEach(el => el.addEventListener("input", update));
@@ -565,32 +580,37 @@ export default class CalendarHUD extends BaseCalendarHUD {
             const root = dialog.element;
             const val = sel => Number(root.querySelector(sel)?.value) || 0;
             const combatUnit = root.querySelector("[name=combatUnit]").value;
+            // A Zona de Qi não entra aqui: é salva imediatamente ao alterar.
             return {
               roundSeconds: Math.max(0, val("[name=combatAmount]")) * (UNIT_SEC[combatUnit] || 1),
               rate: {
                 intervalSeconds: Math.max(1, val("[name=oocInterval]") || 10),
                 amount: Math.max(0, val("[name=oocAmount]")),
                 unit: root.querySelector("[name=oocUnit]").value
-              },
-              qiZone: {
-                level: root.querySelector("[name=qiZone]")?.value ?? "mediano",
-                seita: root.querySelector("[name=qiSeita]")?.checked ?? false,
-                veiaEspiritual: root.querySelector("[name=qiVeia]")?.checked ?? false
               }
             };
           }
         },
-        { action: "cancel", label: "Cancelar", icon: "fa-solid fa-xmark" }
+        // callback null: sem ele, "Cancelar" resolve a promise com a string
+        // "cancel" (truthy) e o bloco de save rodava com valores undefined.
+        { action: "cancel", label: "Cancelar", icon: "fa-solid fa-xmark", callback: () => null }
       ],
       rejectClose: false,
       close: () => null
     });
     if ( !result ) return;
 
-    await game.settings.set("wuxia-system", "calendarCombatRoundSeconds", Math.max(0, Math.round(result.roundSeconds)));
-    await game.settings.set("wuxia-system", "calendarAutoTimeRate", result.rate);
-    await game.settings.set("wuxia-system", "qiZone", result.qiZone);
-    ui.notifications.info("Configuração de tempo e Zona de Qi salva.");
+    // Cada setting é salvo isoladamente e qualquer falha aparece — antes um erro
+    // em qualquer um dos awaits matava o resto silenciosamente (promise flutuante).
+    const failed = [];
+    try {
+      await game.settings.set("wuxia-system", "calendarCombatRoundSeconds", Math.max(0, Math.round(result.roundSeconds)));
+    } catch ( err ) { console.error("Wuxia | falha ao salvar calendarCombatRoundSeconds:", err); failed.push("segundos por rodada"); }
+    try {
+      await game.settings.set("wuxia-system", "calendarAutoTimeRate", result.rate);
+    } catch ( err ) { console.error("Wuxia | falha ao salvar calendarAutoTimeRate:", err); failed.push("ritmo do tempo automático"); }
+    if ( failed.length ) ui.notifications.error(`Falha ao salvar: ${failed.join(", ")} — detalhes no console (F12).`);
+    else ui.notifications.info("Configuração de tempo salva.");
   }
 
   /* -------------------------------------------- */

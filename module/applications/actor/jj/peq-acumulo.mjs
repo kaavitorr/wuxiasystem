@@ -18,6 +18,7 @@
 
 import { getZoneLimit, QI_ZONES } from "./qi-zone.mjs";
 import { essenciaMax } from "../../../systems/cultivation-data.mjs";
+import CalendarData5e from "../../../data/calendar/calendar-data.mjs";
 import PeqAcumuloDialog from "./peq-dialog.mjs";
 
 /**
@@ -42,8 +43,10 @@ function getEssGoal(actor) {
 }
 
 /**
- * Pré-calcula o ganho de cada ficha de JOGADOR (hasPlayerOwner) para `days`
- * dias de cultivo — alimenta o modal (preview) e a aplicação.
+ * Pré-calcula o ganho de cada ficha para `days` dias de cultivo — alimenta o
+ * modal (preview) e a aplicação. Prioriza fichas de JOGADOR (hasPlayerOwner);
+ * se nenhuma existir (ex.: mesa solo/teste com fichas do GM), lista todas as
+ * de personagem para o modal não abrir vazio.
  * Síncrona de propósito: o hook precisa criar o modal e registrar
  * `activeDialog` atomicamente (sem await no meio), senão duas passagens de
  * tempo rápidas abririam dois modais.
@@ -51,10 +54,12 @@ function getEssGoal(actor) {
  * @returns {object[]} Entradas {id, name, img, projected, ...}.
  */
 function buildEntries(days) {
-  const entries = [];
-  for ( const actor of game.actors ) {
-    if ( actor.type !== "character" || !actor.hasPlayerOwner ) continue;
+  const characters = game.actors.filter(a => a.type === "character");
+  const pool = characters.filter(a => a.hasPlayerOwner);
+  const actors = pool.length ? pool : characters;
 
+  const entries = [];
+  for ( const actor of actors ) {
     const gainPerDay = dailyGain(actor);
     const essGoal = getEssGoal(actor);
     const current = Math.max(0, actor.system.cultivation?.essence ?? 0);
@@ -122,7 +127,16 @@ async function applyPeqToActors(ids, days) {
 // ── Hook: tempo do mundo mudou ──────────────────────────────────────────────
 let activeDialog = null;
 
-Hooks.on("updateWorldTime", (worldTime, delta, options) => {
+Hooks.on("updateWorldTime", (worldTime, delta, options, userId) => {
+  // Os deltas (meias-noites cruzadas) são injetados em options por um listener
+  // registrado no corpo do dnd5e.mjs — que avalia DEPOIS dos imports, ou seja,
+  // DEPOIS deste listener. Quando ainda não foram injetados, calculamos aqui
+  // (o método é idempotente: o injetor oficial recalcula o mesmo resultado).
+  if ( !options?.dnd5e?.deltas ) {
+    try { CalendarData5e.onUpdateWorldTime(worldTime, delta, options, userId); }
+    catch ( err ) { console.error("Wuxia | falha ao calcular deltas de tempo:", err); }
+  }
+
   const midnights = options?.dnd5e?.deltas?.midnights;
   if ( !midnights || midnights <= 0 ) return;   // sem virada de dia ou tempo reverso
   const gm = game.users.activeGM;
