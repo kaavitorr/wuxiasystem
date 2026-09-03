@@ -1083,6 +1083,8 @@ export function registerHandlebarsHelpers() {
   };
   Handlebars.registerHelper({
     getProperty: foundry.utils.getProperty,
+    // Wuxia Legacy: isNotNull — distingue null (sem limite) de 0 (valor válido).
+    "wuxia-isNotNull": value => value !== null && value !== undefined,
     "dnd5e-concealSection": concealSection,
     "dnd5e-dataset": dataset,
     "dnd5e-icon": (icon, { hash: options }) => {

@@ -3,6 +3,7 @@ import { formatTime } from "../../utils.mjs";
 import BaseCalendarHUD from "./base-calendar-hud.mjs";
 import CalendarMonthView from "./calendar-month-view.mjs";
 import SetDateDialog from "./set-date-dialog.mjs";
+import { QI_ZONES, getZoneLimit } from "../actor/jj/qi-zone.mjs";
 
 /**
  * @import { CalendarTimeDeltas } from "../../data/calendar/_types.mjs";
@@ -473,18 +474,7 @@ export default class CalendarHUD extends BaseCalendarHUD {
       return s > 1 ? `≈ ${num}× o tempo real` : `≈ ${num}× mais devagar que o real`;
     };
 
-    // ── Wuxia Legacy: Zona de Qi da Região ──────────────────────────────
-    const QI_ZONES = [
-      { id: "quaseInexistente", label: "Qi Quase Inexistente", base: 1 },
-      { id: "escasso",          label: "Qi Escasso",           base: 5 },
-      { id: "inferior",         label: "Qi Inferior",          base: 10 },
-      { id: "mediano",          label: "Qi Mediano",           base: 15 },
-      { id: "altaQualidade",    label: "Qi de Alta Qualidade", base: 25 },
-      { id: "denso",            label: "Qi Denso",             base: 40 },
-      { id: "superior",         label: "Qi Superior",          base: 80 },
-      { id: "perfeito",         label: "Qi Perfeito",          base: 120 },
-      { id: "supremo",          label: "Qi Supremo",           base: Infinity }
-    ];
+    // ── Wuxia Legacy: Zona de Qi da Região (dados de qi-zone.mjs) ───────
     const qiZone = game.settings.get("wuxia-system", "qiZone") ?? {};
     const zoneSel = qiZone.level ?? "mediano";
     const seita = !!qiZone.seita;
@@ -535,15 +525,9 @@ export default class CalendarHUD extends BaseCalendarHUD {
         </section>
       </div>`;
 
-    // Calcula o limite de PEQ/dia da zona com os modificadores.
-    const calcZoneLimit = (zoneId, seita, veia) => {
-      const zone = QI_ZONES.find(z => z.id === zoneId) ?? QI_ZONES[3];
-      if ( zone.base === Infinity ) return Infinity;
-      let limit = zone.base;
-      if ( veia ) limit *= 10;
-      if ( seita ) limit *= 2;
-      return limit;
-    };
+    // Calcula o limite de PEQ/dia da zona com os modificadores (qi-zone.mjs).
+    const calcZoneLimit = (zoneId, seita, veia) =>
+      getZoneLimit({ level: zoneId, seita, veiaEspiritual: veia });
 
     const result = await foundry.applications.api.DialogV2.wait({
       window: { title: "Configurar Tempo", icon: "fa-solid fa-hourglass-half" },

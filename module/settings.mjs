@@ -456,7 +456,8 @@ export function registerSystemSettings() {
     scope: "world",
     config: false,
     type: Object,
-    default: { level: "mediano", seita: false, veiaEspiritual: false }
+    default: { level: "mediano", seita: false, veiaEspiritual: false },
+    onChange: () => { for ( const actor of game.actors ) actor.sheet?.render?.(false); }
   });
 
   // Marca se o reparo único de Vida (advancement de Pontos de Vida dos personagens criados

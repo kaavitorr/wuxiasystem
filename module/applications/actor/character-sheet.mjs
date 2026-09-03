@@ -23,6 +23,8 @@ import "./jj/reducao-dano.mjs";
 import "./jj/portao-vida.mjs";
 import "./jj/feridas.mjs";
 import { chooseBodyAttribute } from "./jj/corpo-atributo.mjs";
+import "./jj/peq-acumulo.mjs";
+import { getZoneLimit } from "./jj/qi-zone.mjs";
 import { getActorUpkeeps } from "./jj/constant-cost.mjs";
 import { renderSacrificeHud } from "./jj/combat-sacrifice-hud.mjs";
 import "./jj/gm-resource-hud.mjs";   // HUD do Narrador — mesmo caminho de carga dos outros widgets jj
@@ -335,18 +337,8 @@ export default class CharacterActorSheet extends BaseActorSheet {
 
     // ── Wuxia Legacy: Zona de Qi — cap diário de absorção de Essência ────
     // O ganho diário de Essência = min(limite da zona, absorção do Manual).
-    // Zona: setting mundial qiZone (base ×10 com Veia, ×2 com Seita).
-    // Manual: flag manualEssencePerDay (aba Manual de Cultivo).
-    const QI_ZONE_BASES = {
-      quaseInexistente: 1, escasso: 5, inferior: 10, mediano: 15,
-      altaQualidade: 25, denso: 40, superior: 80, perfeito: 120, supremo: Infinity
-    };
-    const qiZone = game.settings.get("wuxia-system", "qiZone") ?? {};
-    let zoneLimit = QI_ZONE_BASES[qiZone.level ?? "mediano"] ?? 15;
-    if ( zoneLimit !== Infinity ) {
-      if ( qiZone.veiaEspiritual ) zoneLimit *= 10;
-      if ( qiZone.seita ) zoneLimit *= 2;
-    }
+    // Zona: fonte única em jj/qi-zone.mjs. Manual: flag manualEssencePerDay.
+    const zoneLimit = getZoneLimit();
     const manualAbsorb = this.actor.getFlag("wuxia-system", "manualEssencePerDay") ?? Infinity;
     const dailyEssenceCap = Math.min(zoneLimit, manualAbsorb);
 
@@ -359,7 +351,9 @@ export default class CharacterActorSheet extends BaseActorSheet {
       essencePct: essGoal > 0 ? Math.clamp(Math.round((essence / essGoal) * 100), 0, 100) : 0,
       essFull, pt,
       dailyEssenceCap,
+      capUnlimited: dailyEssenceCap === Infinity,
       zoneLimit,
+      zoneUnlimited: zoneLimit === Infinity,
       manualAbsorb: manualAbsorb === Infinity ? null : manualAbsorb,
       illumination: Math.max(0, c.illumination ?? 0),
       // Iluminação Profunda: 3 PI p/ avançar de Rank automaticamente (sem rolagem).
@@ -1488,8 +1482,11 @@ async _onRender(context, options) {
   this.element.querySelectorAll("[data-manual-essence]").forEach(el => {
     if ( el.dataset.bound ) return;
     el.dataset.bound = "1";
-    el.addEventListener("change", () => {
-      this.actor.setFlag("wuxia-system", "manualEssencePerDay", Math.max(0, Number(el.value) || 0));
+    el.addEventListener("change", async () => {
+      const v = Math.max(0, Number(el.value) || 0);
+      // 0 ou vazio = remove a flag → "sem limite" de absorção do manual.
+      if ( v > 0 ) await this.actor.setFlag("wuxia-system", "manualEssencePerDay", v);
+      else await this.actor.unsetFlag("wuxia-system", "manualEssencePerDay");
     });
   });
   this.element.querySelectorAll("[data-manual-mantra]").forEach(el => {
@@ -4156,7 +4153,8 @@ new foundry.applications.ux.ContextMenu.implementation(
       { id: "supremo", label: "Supremo", color: "#c84b4b" }
     ];
     const manualRarity = this.actor.getFlag("wuxia-system", "manualRarity") ?? "humano";
-    const manualEssencePerDay = this.actor.getFlag("wuxia-system", "manualEssencePerDay") ?? 0;
+    const manualEssenceRaw = this.actor.getFlag("wuxia-system", "manualEssencePerDay");
+    const manualEssencePerDay = (manualEssenceRaw ?? 0) > 0 ? manualEssenceRaw : 0;
     const mantraText = this.actor.getFlag("wuxia-system", "mantraText") ?? "";
     const MANUAL_CLASSES = [
       { id: "inferior", label: "Inferior" },
