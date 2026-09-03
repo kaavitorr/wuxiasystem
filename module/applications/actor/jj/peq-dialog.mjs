@@ -72,9 +72,10 @@ export default class PeqAcumuloDialog extends Dialog5e {
   }
 
   /** @inheritDoc */
-  _onRender(partId, html) {
-    super._onRender(partId, html);
-    if ( partId !== "content" ) return;
+  _onRender(context, options) {
+    super._onRender(context, options);
+    const html = this.element;   // re-anexa a cada render (o HTML é recriado)
+    if ( !html ) return;
 
     const todos = html.querySelector('input[name="peqTodos"]');
     const boxes = () => [...html.querySelectorAll('input[name="peqActor"]:not(:disabled)')];

@@ -17,6 +17,7 @@
  */
 
 import { getZoneLimit, QI_ZONES } from "./qi-zone.mjs";
+import { essenciaMax } from "../../../systems/cultivation-data.mjs";
 import PeqAcumuloDialog from "./peq-dialog.mjs";
 
 /**
@@ -31,12 +32,10 @@ function dailyGain(actor) {
 }
 
 /** Meta de Essência do próximo avanço — mesma régua da aba Cultivo. */
-async function getEssGoal(actor) {
+function getEssGoal(actor) {
   const c = actor.system.cultivation ?? {};
   const rank = Math.clamp(c.rank ?? 1, 1, 10);
   const stage = Math.clamp(c.stage ?? 1, 1, 3);
-  // Import tardio pra evitar ciclo (cultivation-data não importa este arquivo).
-  const { essenciaMax } = await import("../../../systems/cultivation-data.mjs");
   // No 3º estágio a meta é o custo do próximo rank (rompimento); antes, o
   // custo do rank atual. No topo (rank 10) vale o máximo do próprio rank.
   return (stage >= 3 && rank < 10) ? essenciaMax(rank + 1) : essenciaMax(rank);
@@ -45,20 +44,24 @@ async function getEssGoal(actor) {
 /**
  * Pré-calcula o ganho de cada ficha de JOGADOR (hasPlayerOwner) para `days`
  * dias de cultivo — alimenta o modal (preview) e a aplicação.
+ * Síncrona de propósito: o hook precisa criar o modal e registrar
+ * `activeDialog` atomicamente (sem await no meio), senão duas passagens de
+ * tempo rápidas abririam dois modais.
  * @param {number} days
- * @returns {Promise<object[]>} Entradas {id, name, img, projected, ...}.
+ * @returns {object[]} Entradas {id, name, img, projected, ...}.
  */
-async function buildEntries(days) {
+function buildEntries(days) {
   const entries = [];
   for ( const actor of game.actors ) {
     if ( actor.type !== "character" || !actor.hasPlayerOwner ) continue;
 
     const gainPerDay = dailyGain(actor);
-    const essGoal = await getEssGoal(actor);
+    const essGoal = getEssGoal(actor);
     const current = Math.max(0, actor.system.cultivation?.essence ?? 0);
-    const totalGain = gainPerDay * days;   // pode ser Infinity (zona/manual ilimitado)
-    const newEssence = Math.min(current + totalGain, essGoal);
-    const projected = Math.round(newEssence - current);
+    const room = Math.max(0, essGoal - current);   // quanto falta pro próximo avanço
+    const totalGain = gainPerDay * days;           // pode ser Infinity (zona/manual ilimitado)
+    const projected = Math.round(Math.min(totalGain, room));
+    const newEssence = current + projected;
 
     entries.push({
       id: actor.id,
@@ -97,8 +100,7 @@ function zoneInfo() {
 async function applyPeqToActors(ids, days) {
   if ( !Array.isArray(ids) || ids.length === 0 ) return;
 
-  const entries = await buildEntries(days);
-  const byId = new Map(entries.map(e => [e.id, e]));
+  const byId = new Map(buildEntries(days).map(e => [e.id, e]));
 
   for ( const id of ids ) {
     const entry = byId.get(id);
@@ -120,7 +122,7 @@ async function applyPeqToActors(ids, days) {
 // ── Hook: tempo do mundo mudou ──────────────────────────────────────────────
 let activeDialog = null;
 
-Hooks.on("updateWorldTime", async (worldTime, delta, options) => {
+Hooks.on("updateWorldTime", (worldTime, delta, options) => {
   const midnights = options?.dnd5e?.deltas?.midnights;
   if ( !midnights || midnights <= 0 ) return;   // sem virada de dia ou tempo reverso
   const gm = game.users.activeGM;
@@ -132,9 +134,12 @@ Hooks.on("updateWorldTime", async (worldTime, delta, options) => {
     return;
   }
 
+  // Tudo síncrono até aqui de propósito: o modal é criado e registrado em
+  // `activeDialog` no mesmo tick, então uma segunda passagem de tempo nunca
+  // cria um segundo modal.
   const dialog = new PeqAcumuloDialog({
     days: midnights,
-    entries: await buildEntries(midnights),
+    entries: buildEntries(midnights),
     zoneInfo: zoneInfo(),
     rebuild: d => buildEntries(d),
     onApply: (ids, d) => applyPeqToActors(ids, d)
