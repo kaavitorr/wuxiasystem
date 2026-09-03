@@ -1,0 +1,50 @@
+{{!-- Modal de Cultivo Passivo: escolha de fichas ao passar dias (peq-dialog.mjs) --}}
+<div class="peq-dialog">
+
+  {{!-- Resumo: dias + zona de Qi vigente --}}
+  <div class="peq-summary">
+    <div class="peq-days">
+      <i class="fas fa-moon" inert></i>
+      <span><strong>{{days}}</strong> {{#if (eq days 1)}}dia de cultivo{{else}}dias de cultivo{{/if}}</span>
+    </div>
+    <div class="peq-zone">
+      <i class="fas fa-mountain-sun" inert></i>
+      <span class="peq-zone-name">{{zone.label}}</span>
+      <span class="peq-zone-limit">{{zone.limitLabel}} PEQ/dia</span>
+      {{#if zone.mods}}<span class="peq-zone-mods">{{zone.mods}}</span>{{/if}}
+    </div>
+  </div>
+
+  <p class="peq-hint">Selecione quais fichas de jogador cultivaram durante esse período.</p>
+
+  {{!-- Atalho "Todos" --}}
+  <label class="peq-row peq-todos">
+    <input type="checkbox" name="peqTodos">
+    <span class="peq-todos-box"><strong>Todos</strong> — todas as fichas de jogador</span>
+  </label>
+
+  {{!-- Uma checkbox por ficha de jogador --}}
+  <div class="peq-list">
+    {{#each actors as |a|}}
+    <label class="peq-row {{#unless a.canGain}}no-gain{{/unless}}" {{#if a.canGain}}data-tooltip="Cultivar {{a.projected}} PEQ em {{days}} dia(s)"{{/if}}>
+      <input type="checkbox" name="peqActor" value="{{a.id}}" {{#unless a.canGain}}disabled{{/unless}}>
+      <img class="peq-avatar" src="{{a.img}}" alt="{{a.name}}">
+      <span class="peq-name">{{a.name}}
+        <em class="peq-sub">{{a.gainPerDayLabel}}/dia</em>
+      </span>
+      <span class="peq-gain">
+        {{#if a.canGain}}
+          <strong>+{{a.projected}} PEQ</strong>
+          <em class="peq-sub">{{a.current}} → {{a.newEssence}} / {{a.essGoal}}</em>
+        {{else}}
+          <em class="peq-sub">{{a.reason}}</em>
+        {{/if}}
+      </span>
+    </label>
+    {{/each}}
+    {{#unless actors.length}}
+    <p class="peq-empty">Nenhuma ficha de jogador encontrada no mundo.</p>
+    {{/unless}}
+  </div>
+
+</div>
