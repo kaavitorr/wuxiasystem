@@ -2,14 +2,14 @@
   "id": "wuxia-system",
   "title": "Wuxia Legacy",
   "description": "Sistema para jogar Wuxia Legacy",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "compatibility": {
     "minimum": "14.360",
     "verified": "14"
   },
   "url": "https://github.com/kaavitorr/HunterxHunter-System",
   "manifest": "https://raw.githubusercontent.com/kaavitorr/wuxiasystem/main/system.json",
-  "download": "https://github.com/kaavitorr/HunterxHunter-System/releases/download/v1.0.0/wuxia-system.zip",
+  "download": "https://github.com/kaavitorr/HunterxHunter-System/releases/download/v1.0.1/wuxia-system.zip",
   "authors": [
     {
       "name": "Noroi",
